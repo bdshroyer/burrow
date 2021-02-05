@@ -10,4 +10,4 @@ Golang code for exploring some network centrality ideas. Still very much a WIP.
 
 ### Testing
 
-Burrow tests are written using [Ginkgo](https://onsi.github.io/ginkgo), which runs on top of Go's native testing framework. To execute, run `go test`.
+Burrow tests are written using [Ginkgo](https://onsi.github.io/ginkgo), which runs on top of Go's native testing framework. To execute, run `ginkgo` or `go test`.
