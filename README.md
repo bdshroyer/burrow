@@ -1,3 +1,6 @@
+[![burrow-test](https://github.com/bdshroyer/burrow/actions/workflows/burrow-test.yml/badge.svg?branch=master)](https://github.com/bdshroyer/burrow/actions/workflows/burrow-test.yml)
+
+
 # burrow
 
 Golang code for exploring some network centrality ideas. Still very much a WIP.
