@@ -29,13 +29,13 @@ var _ = Describe("Edge", func() {
 
 			// From() and To() should return pointers to objects
 			// that implement the Node interface.
-			Expect(e.From().ID()).To(Equal(int64(1)))
-			Expect(e.To().ID()).To(Equal(int64(2)))
+			Expect(e.From().ID()).To(BeEquivalentTo(1))
+			Expect(e.To().ID()).To(BeEquivalentTo(2))
 
 			ePrime := e.ReversedEdge()
 
-			Expect(ePrime.From().ID()).To(Equal(int64(2)))
-			Expect(ePrime.To().ID()).To(Equal(int64(1)))
+			Expect(ePrime.From().ID()).To(BeEquivalentTo(2))
+			Expect(ePrime.To().ID()).To(BeEquivalentTo(1))
 		})
 	})
 })
