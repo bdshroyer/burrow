@@ -31,19 +31,36 @@ func (n *nodeStub2) ID() int64 {
 	return n.Val
 }
 
-type edgeStub struct {
+type edgeStub1 struct {
 	Src graph.Node
 	Dst graph.Node
 }
 
-func (e *edgeStub) From() graph.Node {
+func (e *edgeStub1) From() graph.Node {
 	return e.Src
 }
 
-func (e *edgeStub) To() graph.Node {
+func (e *edgeStub1) To() graph.Node {
 	return e.Dst
 }
 
-func (e *edgeStub) ReversedEdge() graph.Edge {
-	return &edgeStub{Src: e.Dst, Dst: e.Src}
+func (e *edgeStub1) ReversedEdge() graph.Edge {
+	return &edgeStub1{Src: e.Dst, Dst: e.Src}
+}
+
+type edgeStub2 struct {
+	Src graph.Node
+	Dst graph.Node
+}
+
+func (e *edgeStub2) From() graph.Node {
+	return e.Src
+}
+
+func (e *edgeStub2) To() graph.Node {
+	return e.Dst
+}
+
+func (e *edgeStub2) ReversedEdge() graph.Edge {
+	return &edgeStub2{Src: e.Dst, Dst: e.Src}
 }
