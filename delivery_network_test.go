@@ -120,9 +120,9 @@ var _ = Describe("Graph", func() {
 			})
 
 			Context("HasEdgeBetween", func() {
-				It("Indicates whether or not an edge exists between two nodes", func() {
+				It("Indicates whether or not an edge exists between two nodes, irrespective of direction", func() {
 					Expect(G.HasEdgeBetween(1, 4)).To(BeTrue())
-					Expect(G.HasEdgeBetween(4, 1)).To(BeFalse())
+					Expect(G.HasEdgeBetween(4, 1)).To(BeTrue())
 				})
 
 				It("returns false if queried about nodes that do not exist", func() {

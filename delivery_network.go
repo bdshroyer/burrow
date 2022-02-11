@@ -119,6 +119,16 @@ func (G *DeliveryNetwork) HasEdgeBetween(xid, yid int64) bool {
 		}
 	}
 
+	// HasEdgeBetween doesn't care about directionality; check for an edge running in the opposite direction.
+	edge_list, ok = G.Edges[yid]
+	if ok {
+		for _, edge := range edge_list {
+			if edge.To().ID() == xid {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 
@@ -136,7 +146,7 @@ func (G *DeliveryNetwork) Edge(uid, vid int64) *DeliveryEdge {
 	return nil
 }
 
-// Nodes() returns an iterator of type DeliveryNodes, allowing a pass over all the nodes in this network.
+// Nodes() returns an iterator of type DeliveryNodes, allowing a pass over all the nodes in this network. If the network has no nodes, an empty list is returned.
 func (G *DeliveryNetwork) Nodes() *DeliveryNodes {
 	dn := &DeliveryNodes{Payload: make([]DeliveryNode, 0)}
 
