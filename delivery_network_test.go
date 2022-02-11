@@ -210,6 +210,13 @@ var _ = Describe("Graph", func() {
 					nodes := G.From(1)
 					Expect(nodes.Len()).To(Equal(2))
 				})
+
+				It("Returns an empty list if target has no outbound edges", func() {
+					G := MakeTestDeliveryNetwork([]int64{}, []int64{}, [][2]int64{})
+					Expect(G.Nodes()).NotTo(BeNil())
+					Expect(G.Nodes().Len()).To(Equal(0))
+					Expect(G.Nodes().Node()).To(BeNil())
+				})
 			})
 		})
 	})
