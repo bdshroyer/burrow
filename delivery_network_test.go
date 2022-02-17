@@ -181,56 +181,7 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 				})
 			})
 
-			Describe("Nodes", func() {
-				It("Returns an iterable collection of the graph's nodes", func() {
-					G = MakeTestDeliveryNetwork(
-						[]int64{4, 3},
-						[]int64{1},
-						[][2]int64{edgeFromPair(1, 4), edgeFromPair(1, 3)},
-					)
-
-					payload := G.Nodes()
-					Expect(payload.Len()).To(Equal(3))
-
-					Expect(payload.Node()).To(matchers.MatchNode(&burrow.HubNode{Val: 1}))
-
-					// Test iteration
-					Expect(payload.Next()).To(BeTrue())
-
-					middleNode := payload.Node()
-					Expect(middleNode).To(Or(
-						matchers.MatchNode(&burrow.StopNode{Val: 4}),
-						matchers.MatchNode(&burrow.StopNode{Val: 3}),
-					))
-
-					Expect(payload.Next()).To(BeFalse())
-
-					lastNode := payload.Node()
-
-					Expect(lastNode).To(Or(
-						matchers.MatchNode(&burrow.StopNode{Val: 4}),
-						matchers.MatchNode(&burrow.StopNode{Val: 3}),
-					))
-
-					Expect(lastNode).NotTo(matchers.MatchNode(middleNode))
-
-					// Iterator returns nil after underlying data is exhausted
-					Expect(payload.Next()).To(BeFalse())
-					Expect(payload.Node()).To(BeNil())
-
-					//Test reset
-					payload.Reset()
-					Expect(payload.Node()).To(matchers.MatchNode(&burrow.HubNode{Val: 1}))
-				})
-
-				It("Returns an empty collection when the graph is empty", func() {
-					G := MakeTestDeliveryNetwork([]int64{}, []int64{}, [][2]int64{})
-					Expect(G.Nodes().Len()).To(Equal(0))
-					Expect(G.Nodes().Node()).To(BeNil())
-				})
-			})
-
-			Context("Edge functions", func() {
+			Context("Collection functions", func() {
 				var G *burrow.DeliveryNetwork
 
 				BeforeEach(func() {
@@ -241,18 +192,43 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 					)
 				})
 
+				Describe("Nodes", func() {
+					It("Returns an iterable collection of the graph's nodes", func() {
+						nodes := collectNodes(G.Nodes())
+
+						Expect(nodes).To(ContainElements(
+							matchers.MatchNode(&burrow.StopNode{3}),
+							matchers.MatchNode(&burrow.HubNode{1}),
+							matchers.MatchNode(&burrow.StopNode{4}),
+						))
+					})
+
+					It("Returns an empty collection when the graph is empty", func() {
+						G := new(burrow.DeliveryNetwork)
+
+						Expect(G.Nodes().Len()).To(Equal(0))
+						Expect(G.Nodes().Node()).To(BeNil())
+					})
+				})
+
 				Describe("From", func() {
 					It("Returns an iterator over nodes reachable from the target", func() {
 						nodes := collectNodes(G.From(1))
+
 						Expect(len(nodes)).To(Equal(2))
+
+						Expect(nodes).To(ContainElements(
+							matchers.MatchNode(&burrow.StopNode{3}),
+							matchers.MatchNode(&burrow.StopNode{4}),
+						))
 					})
 
-					It("Returns an empty list if target has no outbound edges", func() {
+					It("Returns an empty collection if target has no outbound edges", func() {
 						nodes := collectNodes(G.From(4))
 						Expect(nodes).To(BeEmpty())
 					})
 
-					It("Returns an empty list if the targeted node does not exist", func() {
+					It("Returns an empty collection if the targeted node does not exist", func() {
 						nodes := collectNodes(G.To(2))
 						Expect(nodes).To(BeEmpty())
 					})
@@ -261,10 +237,13 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 				Describe("To", func() {
 					It("Returns an iterable collection of nodes that directly connect to the target", func() {
 						nodes := collectNodes(G.To(4))
+
 						Expect(len(nodes)).To(Equal(2))
 
-						Expect(nodes).To(ContainElement(matchers.MatchNode(&burrow.HubNode{Val: 1})))
-						Expect(nodes).To(ContainElement(matchers.MatchNode(&burrow.StopNode{Val: 3})))
+						Expect(nodes).To(ContainElements(
+							matchers.MatchNode(&burrow.StopNode{3}),
+							matchers.MatchNode(&burrow.HubNode{1}),
+						))
 					})
 
 					It("Returns an empty list if the target has no inbound edges", func() {
