@@ -4,6 +4,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"gonum.org/v1/gonum/graph"
+
 	"github.com/bdshroyer/burrow"
 	"github.com/bdshroyer/burrow/matchers"
 )
@@ -25,7 +27,9 @@ func MakeTestDeliveryNetwork(stops []int64, hubs []int64, edges [][2]int64) *bur
 
 	for _, edge_pair := range edges {
 		src, dst := G.Node(edge_pair[0]), G.Node(edge_pair[1])
-		G.Edges[src.ID()] = append(G.Edges[src.ID()], &burrow.DeliveryEdge{Src: src, Dst: dst})
+		srcDN, dstDN := src.(burrow.DeliveryNode), dst.(burrow.DeliveryNode)
+
+		G.Edges[src.ID()] = append(G.Edges[src.ID()], &burrow.DeliveryEdge{Src: srcDN, Dst: dstDN})
 	}
 
 	return G
@@ -49,7 +53,28 @@ func stopToStop(src, dst int) *burrow.DeliveryEdge {
 	}
 }
 
-var _ = Describe("Graph", func() {
+func collectNodes(iter graph.Nodes) []interface{} {
+	lst := make([]interface{}, 0, iter.Len())
+
+	if iter.Len() == 0 {
+		return lst
+	}
+
+	lst = append(lst, iter.Node())
+
+	for {
+		proceed := iter.Next()
+		lst = append(lst, iter.Node())
+
+		if !proceed {
+			break
+		}
+	}
+
+	return lst
+}
+
+var _ = Describe("DeliveryNetwork functionality", func() {
 	Describe("NewDeliveryNetwork", func() {
 		It("Returns a delivery network containing the specified indices", func() {
 			G := burrow.NewDeliveryNetwork(
@@ -107,7 +132,13 @@ var _ = Describe("Graph", func() {
 				G = MakeTestDeliveryNetwork([]int64{4}, []int64{1}, [][2]int64{edgeFromPair(1, 4)})
 			})
 
-			Context("Node", func() {
+			It("Implements the required DiGraph interface", func() {
+				var _ graph.Directed = (*burrow.DeliveryNetwork)(nil)
+				_, ok := interface{}(G).(graph.Directed)
+				Expect(ok).To(BeTrue())
+			})
+
+			Describe("Node", func() {
 				It("Allows nodes to be accessed by ID (Graph interface)", func() {
 					// Returns hub nodes and stop nodes seamlessly.
 					Expect(G.Node(1).ID()).To(BeEquivalentTo(1))
@@ -119,7 +150,7 @@ var _ = Describe("Graph", func() {
 				})
 			})
 
-			Context("HasEdgeBetween", func() {
+			Describe("HasEdgeBetween", func() {
 				It("Indicates whether or not an edge exists between two nodes, irrespective of direction", func() {
 					Expect(G.HasEdgeBetween(1, 4)).To(BeTrue())
 					Expect(G.HasEdgeBetween(4, 1)).To(BeTrue())
@@ -132,7 +163,7 @@ var _ = Describe("Graph", func() {
 				})
 			})
 
-			Context("Edge", func() {
+			Describe("Edge", func() {
 				It("Returns the specified edge if it exists", func() {
 					edge := G.Edge(1, 4)
 					Expect(edge.From().ID()).To(BeEquivalentTo(1))
@@ -150,7 +181,7 @@ var _ = Describe("Graph", func() {
 				})
 			})
 
-			Context("Nodes", func() {
+			Describe("Nodes", func() {
 				It("Returns an iterable collection of the graph's nodes", func() {
 					G = MakeTestDeliveryNetwork(
 						[]int64{4, 3},
@@ -199,23 +230,81 @@ var _ = Describe("Graph", func() {
 				})
 			})
 
-			Context("From", func() {
-				It("Returns a list of nodes reachable from the target", func() {
+			Context("Edge functions", func() {
+				var G *burrow.DeliveryNetwork
+
+				BeforeEach(func() {
 					G = MakeTestDeliveryNetwork(
 						[]int64{4, 3},
 						[]int64{1},
-						[][2]int64{edgeFromPair(1, 4), edgeFromPair(1, 3)},
+						[][2]int64{edgeFromPair(1, 4), edgeFromPair(1, 3), edgeFromPair(3, 4)},
 					)
-
-					nodes := G.From(1)
-					Expect(nodes.Len()).To(Equal(2))
 				})
 
-				It("Returns an empty list if target has no outbound edges", func() {
-					G := MakeTestDeliveryNetwork([]int64{}, []int64{}, [][2]int64{})
-					Expect(G.Nodes()).NotTo(BeNil())
-					Expect(G.Nodes().Len()).To(Equal(0))
-					Expect(G.Nodes().Node()).To(BeNil())
+				Describe("From", func() {
+					It("Returns an iterator over nodes reachable from the target", func() {
+						nodes := collectNodes(G.From(1))
+						Expect(len(nodes)).To(Equal(2))
+					})
+
+					It("Returns an empty list if target has no outbound edges", func() {
+						nodes := collectNodes(G.From(4))
+						Expect(nodes).To(BeEmpty())
+					})
+
+					It("Returns an empty list if the targeted node does not exist", func() {
+						nodes := collectNodes(G.To(2))
+						Expect(nodes).To(BeEmpty())
+					})
+				})
+
+				Describe("To", func() {
+					It("Returns an iterable collection of nodes that directly connect to the target", func() {
+						nodes := collectNodes(G.To(4))
+						Expect(len(nodes)).To(Equal(2))
+
+						Expect(nodes).To(ContainElement(matchers.MatchNode(&burrow.HubNode{Val: 1})))
+						Expect(nodes).To(ContainElement(matchers.MatchNode(&burrow.StopNode{Val: 3})))
+					})
+
+					It("Returns an empty list if the target has no inbound edges", func() {
+						nodes := collectNodes(G.To(1))
+						Expect(nodes).To(BeEmpty())
+					})
+
+					It("Returns an empty list if the targeted node does not exist", func() {
+						nodes := collectNodes(G.To(2))
+						Expect(nodes).To(BeEmpty())
+					})
+				})
+			})
+
+			Describe("HasEdgeFromTo", func() {
+				var G *burrow.DeliveryNetwork
+
+				BeforeEach(func() {
+					G = MakeTestDeliveryNetwork(
+						[]int64{4, 3},
+						[]int64{1},
+						[][2]int64{
+							edgeFromPair(1, 4),
+							edgeFromPair(1, 3),
+							edgeFromPair(3, 4),
+							edgeFromPair(3, 1),
+						},
+					)
+				})
+
+				It("returns true if the specified directional edge exists", func() {
+					Expect(G.HasEdgeFromTo(1, 4)).To(BeTrue())
+				})
+
+				It("returns false if the edge doesn't exist", func() {
+					Expect(G.HasEdgeFromTo(4, 1)).To(BeFalse())
+
+					Expect(G.HasEdgeFromTo(1, 2)).To(BeFalse())
+					Expect(G.HasEdgeFromTo(2, 1)).To(BeFalse())
+					Expect(G.HasEdgeFromTo(2, 5)).To(BeFalse())
 				})
 			})
 		})

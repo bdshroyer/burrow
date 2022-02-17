@@ -13,6 +13,10 @@ All node, edge and graph structures in burrow implement the corresponding interf
 */
 package burrow
 
+import (
+	"gonum.org/v1/gonum/graph"
+)
+
 // DeliveryNodes is the DeliveryNetwork implementation of the Nodes type in gonum/graph. Specifically, it is an iterator that allows application code to traverse the delivery network nodes in a list-like fashion.
 //
 // Note that the DeliveryNodes iterator traverses hub nodes first, then stop nodes.
@@ -27,7 +31,7 @@ func (d DeliveryNodes) Len() int {
 }
 
 // Node() returns the current node without advancing the iterator; i.e., it works as an implementation of peek.
-func (d *DeliveryNodes) Node() DeliveryNode {
+func (d *DeliveryNodes) Node() graph.Node {
 	var current DeliveryNode
 
 	if d.Len() > 0 && d.CurrentIdx < d.Len() {
@@ -83,7 +87,14 @@ func NewDeliveryNetwork(stops []int64, hubs []int64, edges [][2]int64) *Delivery
 
 	for _, edge_pair := range edges {
 		src, dst := G.Node(edge_pair[0]), G.Node(edge_pair[1])
-		G.Edges[src.ID()] = append(G.Edges[src.ID()], &DeliveryEdge{Src: src, Dst: dst})
+
+		G.Edges[src.ID()] = append(
+			G.Edges[src.ID()],
+			&DeliveryEdge{
+				Src: src.(DeliveryNode),
+				Dst: dst.(DeliveryNode),
+			},
+		)
 	}
 
 	return G
@@ -92,7 +103,7 @@ func NewDeliveryNetwork(stops []int64, hubs []int64, edges [][2]int64) *Delivery
 // Node(int) returns the node referenced by the given index, or nil if the index can't be found in the network.
 //
 // Note that this function does not distinguish between hub or stop nodes.
-func (G *DeliveryNetwork) Node(id int64) DeliveryNode {
+func (G *DeliveryNetwork) Node(id int64) graph.Node {
 	var node DeliveryNode
 
 	node, ok := G.Stops[id]
@@ -108,7 +119,7 @@ func (G *DeliveryNetwork) Node(id int64) DeliveryNode {
 	return nil
 }
 
-// Returns true if an edge connects the two nodes. This function is present to satisfy the Graph interface requirements, but it is NOT direction-sensitive, even though delivery networks are.
+// HasEdgeBetween returns true if an edge connects the two nodes. This function is present to satisfy the Graph interface requirements, but it is NOT direction-sensitive, even though delivery networks are.
 func (G *DeliveryNetwork) HasEdgeBetween(xid, yid int64) bool {
 	edge_list, ok := G.Edges[xid]
 	if ok {
@@ -132,8 +143,23 @@ func (G *DeliveryNetwork) HasEdgeBetween(xid, yid int64) bool {
 	return false
 }
 
+// HasEdgeFromTo is a directional version of HasEdgeBetween(), returning true if an edge exists with uid as a source and vid as a destination, and false otherwise.
+func (G *DeliveryNetwork) HasEdgeFromTo(uid, vid int64) bool {
+	edges, ok := G.Edges[uid]
+
+	if ok {
+		for _, edge := range edges {
+			if edge.To().ID() == vid {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // Returns the edge running from uid to vid, or nil if said edge doesn't exist.
-func (G *DeliveryNetwork) Edge(uid, vid int64) *DeliveryEdge {
+func (G *DeliveryNetwork) Edge(uid, vid int64) graph.Edge {
 	edge_list, ok := G.Edges[uid]
 	if ok {
 		for _, edge := range edge_list {
@@ -147,7 +173,7 @@ func (G *DeliveryNetwork) Edge(uid, vid int64) *DeliveryEdge {
 }
 
 // Nodes() returns an iterator of type DeliveryNodes, allowing a pass over all the nodes in this network. If the network has no nodes, an empty list is returned.
-func (G *DeliveryNetwork) Nodes() *DeliveryNodes {
+func (G *DeliveryNetwork) Nodes() graph.Nodes {
 	dn := &DeliveryNodes{Payload: make([]DeliveryNode, 0)}
 
 	for _, v := range G.Hubs {
@@ -161,8 +187,8 @@ func (G *DeliveryNetwork) Nodes() *DeliveryNodes {
 	return dn
 }
 
-// From() returns an iterator all nodes for which an edge exists with id as a source. If the specified node has no outbound edges, an empty list is returned.
-func (G *DeliveryNetwork) From(id int64) *DeliveryNodes {
+// From() returns an iterator over all nodes reached by id's outbound edges. If the specified node has no outbound edges, an empty list is returned.
+func (G *DeliveryNetwork) From(id int64) graph.Nodes {
 	dn := &DeliveryNodes{Payload: make([]DeliveryNode, 0)}
 
 	reachable, ok := G.Edges[id]
@@ -170,6 +196,43 @@ func (G *DeliveryNetwork) From(id int64) *DeliveryNodes {
 	if ok {
 		for _, edge := range reachable {
 			dn.Payload = append(dn.Payload, edge.To().(DeliveryNode))
+		}
+	}
+
+	return dn
+}
+
+// Returns an iterator over all nodes with a direct hop to the node specified by id. If the specified node has no inbound edges, an empty list is returned.
+func (G *DeliveryNetwork) To(id int64) graph.Nodes {
+	dn := &DeliveryNodes{Payload: make([]DeliveryNode, 0)}
+
+	dst := G.Node(id)
+
+	if dst == nil {
+		return dn
+	}
+
+	for _, src := range G.Hubs {
+		srcEdges, ok := G.Edges[src.ID()]
+
+		if ok {
+			for _, e := range srcEdges {
+				if e.To().ID() == dst.ID() {
+					dn.Payload = append(dn.Payload, e.From().(DeliveryNode))
+				}
+			}
+		}
+	}
+
+	for _, src := range G.Stops {
+		srcEdges, ok := G.Edges[src.ID()]
+
+		if ok {
+			for _, e := range srcEdges {
+				if e.To().ID() == dst.ID() {
+					dn.Payload = append(dn.Payload, e.From().(DeliveryNode))
+				}
+			}
 		}
 	}
 
