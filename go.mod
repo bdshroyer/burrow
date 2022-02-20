@@ -3,7 +3,7 @@ module github.com/bdshroyer/burrow
 go 1.17
 
 require (
-	github.com/onsi/ginkgo/v2 v2.1.2
+	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.18.1
 	gonum.org/v1/gonum v0.9.3
 )
