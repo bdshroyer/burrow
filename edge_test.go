@@ -19,12 +19,12 @@ func (n *TestNode) IsHub() bool {
 	return false
 }
 
-var _ = Describe("Edge", func() {
-	Describe("DeliveryEdge", func() {
+var _ = Describe("DeliveryEdge", func() {
+	Describe("Edge", func() {
 		It("Implements the Edge interface", func() {
 			e := &burrow.DeliveryEdge{
-				Src: &TestNode{Val: int64(1)},
-				Dst: &TestNode{Val: int64(2)},
+				Src: &TestNode{Val: 1},
+				Dst: &TestNode{Val: 2},
 			}
 
 			// From() and To() should return pointers to objects
@@ -36,6 +36,18 @@ var _ = Describe("Edge", func() {
 
 			Expect(ePrime.From().ID()).To(BeEquivalentTo(2))
 			Expect(ePrime.To().ID()).To(BeEquivalentTo(1))
+		})
+	})
+
+	Describe("Weight", func() {
+		It("Returns the assigned edge weight", func() {
+			e := burrow.DeliveryEdge{
+				Src: &TestNode{Val: int64(1)},
+				Dst: &TestNode{Val: int64(2)},
+				Wgt: 3.0,
+			}
+
+			Expect(e.Weight()).To(BeEquivalentTo(3.0))
 		})
 	})
 })

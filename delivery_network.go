@@ -8,8 +8,8 @@ This package builds on and makes extensive use of the gonum graph library. For m
 All node, edge and graph structures in burrow implement the corresponding interfaces in gonum/graph. More specifically:
 
 	* HubNode, StopNode -> gonum/graph.Node
-	* DeliveryEdge -> gonum/graph.Edge
-	* DeliveryNetwork -> gonum/graph.Graph
+	* DeliveryEdge -> gonum/graph.{Edge, WeightedEdge}
+	* DeliveryNetwork -> gonum/graph.{Graph, Directed, Weighted}
 */
 package burrow
 
@@ -194,4 +194,42 @@ func (G *DeliveryNetwork) To(id int64) graph.Nodes {
 	}
 
 	return dn
+}
+
+// Returns the weighted edge specified by the two vertex IDs uid, vid. Returns nil if no such edge exists.
+func (G *DeliveryNetwork) WeightedEdge(uid, vid int64) graph.WeightedEdge {
+	edges, ok := G.Edges[uid]
+	if !ok {
+		return nil
+	}
+
+	for _, e := range edges {
+		if e.To().ID() == vid {
+			return G.Edge(uid, vid).(graph.WeightedEdge)
+		}
+	}
+
+	return nil
+}
+
+// Returns the weight of the edge specified, as well a hash-style ok variable. If no edge exists between the specified vertices, then it returns a 0 value for the edge weight, as well as a success value of false.
+//
+// Note that Weight()'s ok return value will be set to true if uid == vid, even though the weight return will be the default option.
+func (G *DeliveryNetwork) Weight(uid, vid int64) (float64, bool) {
+	if uid == vid {
+		return 0.0, true
+	}
+
+	eList, ok := G.Edges[uid]
+	if !ok {
+		return 0.0, false
+	}
+
+	for _, e := range eList {
+		if e.To().ID() == vid {
+			return e.Weight(), true
+		}
+	}
+
+	return 0.0, false
 }

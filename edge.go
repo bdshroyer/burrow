@@ -6,6 +6,7 @@ import "gonum.org/v1/gonum/graph"
 type DeliveryEdge struct {
 	Src DeliveryNode
 	Dst DeliveryNode
+	Wgt float64
 }
 
 // From() returns the edge's source node.
@@ -24,4 +25,9 @@ func (e *DeliveryEdge) ReversedEdge() graph.Edge {
 		Src: e.Dst,
 		Dst: e.Src,
 	}
+}
+
+// Weight() returns the weight of the given edge as a float.
+func (e *DeliveryEdge) Weight() float64 {
+	return e.Wgt
 }

@@ -29,7 +29,7 @@ func MakeTestDeliveryNetwork(stops []int64, hubs []int64, edges [][2]int64) *bur
 		src, dst := G.Node(edge_pair[0]), G.Node(edge_pair[1])
 		srcDN, dstDN := src.(burrow.DeliveryNode), dst.(burrow.DeliveryNode)
 
-		G.Edges[src.ID()] = append(G.Edges[src.ID()], &burrow.DeliveryEdge{Src: srcDN, Dst: dstDN})
+		G.Edges[src.ID()] = append(G.Edges[src.ID()], &burrow.DeliveryEdge{Src: srcDN, Dst: dstDN, Wgt: 1.0})
 	}
 
 	return G
@@ -284,6 +284,62 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 					Expect(G.HasEdgeFromTo(1, 2)).To(BeFalse())
 					Expect(G.HasEdgeFromTo(2, 1)).To(BeFalse())
 					Expect(G.HasEdgeFromTo(2, 5)).To(BeFalse())
+				})
+			})
+		})
+
+		Context("Weight functions", func() {
+			var G *burrow.DeliveryNetwork
+
+			BeforeEach(func() {
+				G = MakeTestDeliveryNetwork(
+					[]int64{4, 3},
+					[]int64{1},
+					[][2]int64{
+						edgeFromPair(1, 4),
+						edgeFromPair(1, 3),
+						edgeFromPair(3, 4),
+					},
+				)
+
+				G.Edges[3][0].Wgt = 3.0
+			})
+
+			Describe("WeightedEdge", func() {
+				It("Returns the weighted edge between two vertices", func() {
+					var e graph.WeightedEdge
+
+					e = G.WeightedEdge(3, 4) // implicitly tests interface
+					Expect(e).To(matchers.MatchEdge(stopToStop(3, 4)))
+					Expect(e.Weight()).To(BeEquivalentTo(3))
+				})
+
+				It("Returns nil when the edge doesn't exist", func() {
+					Expect(G.WeightedEdge(2, 4)).To(BeNil())
+					Expect(G.WeightedEdge(3, 1)).To(BeNil())
+				})
+			})
+
+			Describe("Weight", func() {
+				It("Returns the weight of the edge between u and v if it exists", func() {
+					weight, ok := G.Weight(3, 4)
+
+					Expect(ok).To(BeTrue())
+					Expect(weight).To(BeEquivalentTo(3.0))
+				})
+
+				It("Returns 0 with the ok flag set to false when edge doesn't exist", func() {
+					weight, ok := G.Weight(3, 1)
+
+					Expect(ok).To(BeFalse())
+					Expect(weight).To(BeZero())
+				})
+
+				It("Returns with 0 weight and true if the source and dest are the same", func() {
+					weight, ok := G.Weight(4, 4)
+
+					Expect(ok).To(BeTrue())
+					Expect(weight).To(BeZero())
 				})
 			})
 		})
