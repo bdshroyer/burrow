@@ -42,14 +42,14 @@ func edgeFromPair(src, dst int) [2]int64 {
 func hubToStop(src, dst int) *burrow.DeliveryEdge {
 	return &burrow.DeliveryEdge{
 		Src: &burrow.HubNode{int64(src)},
-		Dst: &burrow.StopNode{int64(dst)},
+		Dst: dummyStop(int64(dst)),
 	}
 }
 
 func stopToStop(src, dst int) *burrow.DeliveryEdge {
 	return &burrow.DeliveryEdge{
-		Src: &burrow.StopNode{int64(src)},
-		Dst: &burrow.StopNode{int64(dst)},
+		Src: dummyStop(int64(src)),
+		Dst: dummyStop(int64(dst)),
 	}
 }
 
@@ -89,12 +89,12 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 
 			Expect(G.Stops).To(HaveKeyWithValue(
 				BeEquivalentTo(2),
-				matchers.MatchNode(&burrow.StopNode{Val: 2}),
+				matchers.MatchNode(dummyStop(2)),
 			))
 
 			Expect(G.Stops).To(HaveKeyWithValue(
 				BeEquivalentTo(4),
-				matchers.MatchNode(&burrow.StopNode{Val: 4}),
+				matchers.MatchNode(dummyStop(4)),
 			))
 
 			Expect(G.Hubs).To(HaveKeyWithValue(
@@ -197,9 +197,9 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 						nodes := collectNodes(G.Nodes())
 
 						Expect(nodes).To(ContainElements(
-							matchers.MatchNode(&burrow.StopNode{3}),
+							matchers.MatchNode(dummyStop(3)),
 							matchers.MatchNode(&burrow.HubNode{1}),
-							matchers.MatchNode(&burrow.StopNode{4}),
+							matchers.MatchNode(dummyStop(4)),
 						))
 					})
 
@@ -218,8 +218,8 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 						Expect(len(nodes)).To(Equal(2))
 
 						Expect(nodes).To(ContainElements(
-							matchers.MatchNode(&burrow.StopNode{3}),
-							matchers.MatchNode(&burrow.StopNode{4}),
+							matchers.MatchNode(dummyStop(3)),
+							matchers.MatchNode(dummyStop(4)),
 						))
 					})
 
@@ -241,7 +241,7 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 						Expect(len(nodes)).To(Equal(2))
 
 						Expect(nodes).To(ContainElements(
-							matchers.MatchNode(&burrow.StopNode{3}),
+							matchers.MatchNode(dummyStop(3)),
 							matchers.MatchNode(&burrow.HubNode{1}),
 						))
 					})

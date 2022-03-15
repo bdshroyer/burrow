@@ -1,6 +1,10 @@
 package burrow
 
-import "gonum.org/v1/gonum/graph"
+import (
+	"time"
+
+	"gonum.org/v1/gonum/graph"
+)
 
 // DeliveryNode an extension of the standard gonum Node interface that encompasses both delivery stops as well as the hubs from which vehicles are dispatched.
 type DeliveryNode interface {
@@ -25,7 +29,8 @@ func (n *HubNode) IsHub() bool {
 
 // StopNode represents a delivery stop made by a vehicle. It is implicitly assumed that stops cannot be hubs.
 type StopNode struct {
-	Val int64
+	Val       int64
+	Timestamp time.Time
 }
 
 // ID() is a Node interface implementer that returns the stop node's ID.
