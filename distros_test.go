@@ -12,9 +12,14 @@ func testDistro() float64 {
 	return rand.Float64()
 }
 
-var _ = Describe("Distros", func() {
-	// first two numbers returned by rand.Float64() with seed 3
+func MakeTestGenerator(distro burrow.SampleDistribution) *burrow.DistroGenerator {
+	return &burrow.DistroGenerator{
+		Distro: distro,
+		Quit:   make(chan bool),
+	}
+}
 
+var _ = Describe("Distros", func() {
 	BeforeEach(func() {
 		rand.Seed(3)
 	})
@@ -22,7 +27,9 @@ var _ = Describe("Distros", func() {
 	Context("SampleDistribution generator", func() {
 		When("Invoked with a positive number", func() {
 			It("Returns the same number of samples drawn from the given distribution", func() {
-				sample := burrow.SampleDistribution(testDistro).Sample(2)
+				generator := MakeTestGenerator(burrow.SampleDistribution(testDistro))
+				sample := generator.Sample(2)
+
 				Eventually(sample).Should(Receive(BeNumerically("~", 0.71998, 1e-4)))
 				Eventually(sample).Should(Receive(BeNumerically("~", 0.65263, 1e-4)))
 				Eventually(sample).Should(BeClosed())
@@ -31,7 +38,23 @@ var _ = Describe("Distros", func() {
 
 		When("Invoked with a zero", func() {
 			It("Closes without returning any numbers", func() {
-				sample := burrow.SampleDistribution(testDistro).Sample(0)
+				generator := MakeTestGenerator(burrow.SampleDistribution(testDistro))
+				sample := generator.Sample(0)
+
+				Consistently(sample).ShouldNot(Receive())
+				Eventually(sample).Should(BeClosed())
+			})
+		})
+
+		When("The Stop() command is called", func() {
+			It("Stops generating new samples and exits", func() {
+				generator := MakeTestGenerator(burrow.SampleDistribution(testDistro))
+				sample := generator.Sample(4)
+
+				Eventually(sample).Should(Receive())
+
+				generator.Stop()
+
 				Consistently(sample).ShouldNot(Receive())
 				Eventually(sample).Should(BeClosed())
 			})
@@ -44,10 +67,8 @@ var _ = Describe("Distros", func() {
 				distro, err := burrow.MakeUniformDistribution(5.0)
 				Expect(err).NotTo(HaveOccurred())
 
-				sample := distro.Sample(2)
-				Eventually(sample).Should(Receive(BeNumerically("~", 5*0.71998, 1e-4)))
-				Eventually(sample).Should(Receive(BeNumerically("~", 5*0.65263, 1e-4)))
-				Eventually(sample).Should(BeClosed())
+				Expect(distro()).To(BeNumerically("~", 5*0.71998, 1e-4))
+				Expect(distro()).To(BeNumerically("~", 5*0.65263, 1e-4))
 			})
 		})
 
