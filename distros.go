@@ -27,6 +27,14 @@ type DistroGenerator struct {
 	Quit   chan bool
 }
 
+func NewDistroGenerator(distro SampleDistribution) (*DistroGenerator, error) {
+	if distro == nil {
+		return nil, fmt.Errorf("Must receive a non-null sample distribution.")
+	}
+
+	return &DistroGenerator{Distro: distro, Quit: make(chan bool)}, nil
+}
+
 // Sample generates `n` samples drawn from the probability distribution `distro`, which it feeds into the channel returned to the caller. In effect, this is a Python-style generator for distribution samples.
 // Note: Make sure to call the distribution's Stop or Close() methods if the Sample function is not going to be allowed to finish (if, for example, the consumer decides to exit its consumption loop).
 func (distro *DistroGenerator) Sample(n uint) chan float64 {

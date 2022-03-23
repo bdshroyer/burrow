@@ -24,6 +24,25 @@ var _ = Describe("Distros", func() {
 		rand.Seed(3)
 	})
 
+	Context("NewDistroGenerator", func() {
+		When("Called on a valid sample distribution", func() {
+			It("Returns a new distribution generator struct", func() {
+				generator, err := burrow.NewDistroGenerator(burrow.SampleDistribution(testDistro))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(generator).NotTo(BeNil())
+				Expect(generator.Quit).NotTo(BeClosed())
+			})
+		})
+
+		When("Called on a nilsample distribution", func() {
+			It("returns nil and raises an error", func() {
+				generator, err := burrow.NewDistroGenerator(nil)
+				Expect(err).To(MatchError("Must receive a non-null sample distribution."))
+				Expect(generator).To(BeNil())
+			})
+		})
+	})
+
 	Context("SampleDistribution generator", func() {
 		When("Invoked with a positive number", func() {
 			It("Returns the same number of samples drawn from the given distribution", func() {
