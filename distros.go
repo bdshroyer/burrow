@@ -1,5 +1,10 @@
 package burrow
 
+import (
+	"fmt"
+	"math/rand"
+)
+
 // A SampleDistribution is a function that returns a float64, representing a number drawn randomly according to a probability distribution.
 type SampleDistribution func() float64
 
@@ -16,4 +21,16 @@ func (distro SampleDistribution) Sample(n uint) chan float64 {
 	}()
 
 	return output
+}
+
+func MakeUniformDistribution(uniformRange float64) (SampleDistribution, error) {
+	if uniformRange <= 0 {
+		return nil, fmt.Errorf("Distribution range must be a positive number.")
+	}
+
+	distroFunc := func() float64 {
+		return rand.Float64() * uniformRange
+	}
+
+	return SampleDistribution(distroFunc), nil
 }
