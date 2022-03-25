@@ -12,14 +12,16 @@ func testDistro() float64 {
 	return rand.Float64()
 }
 
-func MakeTestGenerator(distro burrow.SampleDistribution) *burrow.DistroGenerator {
-	return &burrow.DistroGenerator{
+func MakeTestGenerator[T burrow.Rangeable] (distro burrow.SampleDistribution[T]) *burrow.DistroGenerator[T] {
+	return &burrow.DistroGenerator[T]{
 		Distro: distro,
 		Quit:   make(chan bool),
 	}
 }
 
 var _ = Describe("Distros", func() {
+	sampleDistro := burrow.SampleDistribution[float64](testDistro)
+
 	BeforeEach(func() {
 		rand.Seed(3)
 	})
@@ -27,7 +29,7 @@ var _ = Describe("Distros", func() {
 	Context("NewDistroGenerator", func() {
 		When("Called on a valid sample distribution", func() {
 			It("Returns a new distribution generator struct", func() {
-				generator, err := burrow.NewDistroGenerator(burrow.SampleDistribution(testDistro))
+				generator, err := burrow.NewDistroGenerator(sampleDistro)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(generator).NotTo(BeNil())
 				Expect(generator.Quit).NotTo(BeClosed())
@@ -36,7 +38,7 @@ var _ = Describe("Distros", func() {
 
 		When("Called on a nilsample distribution", func() {
 			It("returns nil and raises an error", func() {
-				generator, err := burrow.NewDistroGenerator(nil)
+				generator, err := burrow.NewDistroGenerator[float64](nil)
 				Expect(err).To(MatchError("Must receive a non-null sample distribution."))
 				Expect(generator).To(BeNil())
 			})
@@ -46,7 +48,7 @@ var _ = Describe("Distros", func() {
 	Context("SampleDistribution generator", func() {
 		When("Invoked with a positive number", func() {
 			It("Returns the same number of samples drawn from the given distribution", func() {
-				generator := MakeTestGenerator(burrow.SampleDistribution(testDistro))
+				generator := MakeTestGenerator(sampleDistro)
 				sample := generator.Sample(2)
 
 				Eventually(sample).Should(Receive(BeNumerically("~", 0.71998, 1e-4)))
@@ -57,7 +59,7 @@ var _ = Describe("Distros", func() {
 
 		When("Invoked with a zero", func() {
 			It("Closes without returning any numbers", func() {
-				generator := MakeTestGenerator(burrow.SampleDistribution(testDistro))
+				generator := MakeTestGenerator(sampleDistro)
 				sample := generator.Sample(0)
 
 				Consistently(sample).ShouldNot(Receive())
@@ -67,7 +69,7 @@ var _ = Describe("Distros", func() {
 
 		When("The Stop() command is called", func() {
 			It("Stops generating new samples and exits", func() {
-				generator := MakeTestGenerator(burrow.SampleDistribution(testDistro))
+				generator := MakeTestGenerator(sampleDistro)
 				sample := generator.Sample(4)
 
 				Eventually(sample).Should(Receive())
