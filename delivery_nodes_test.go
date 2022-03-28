@@ -40,8 +40,24 @@ var _ = Describe("DeliveryNodes", func() {
 	})
 
 	Context("Len", func() {
-		It("Returns the number of nodes in the collection", func() {
+		It("Returns the number of nodes in a new collection", func() {
 			Expect(nodes.Len()).To(BeEquivalentTo(3))
+		})
+
+		It("Returns the number of nodes remaining in a partially traversed collection", func() {
+			nodes.Next()
+			Expect(nodes.Len()).To(BeEquivalentTo(2))
+		})
+
+		It("Returns 0 on an exhausted iterator in perpetuity", func() {
+			for nodes.Next() {
+			}
+			nodes.Next()
+
+			Expect(nodes.Len()).To(Equal(0))
+
+			nodes.Next()
+			Expect(nodes.Len()).To(Equal(0))
 		})
 
 		It("Returns nil on an empty collection", func() {
