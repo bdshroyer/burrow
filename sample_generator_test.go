@@ -36,7 +36,7 @@ var _ = Describe("SampleGenerator", func() {
 			})
 		})
 
-		When("Called on a nilsample distribution", func() {
+		When("Called on a nil sample distribution", func() {
 			It("returns nil and raises an error", func() {
 				generator, err := burrow.NewSampleGenerator[float64](nil)
 				Expect(err).To(MatchError("Must receive a non-null sample distribution."))

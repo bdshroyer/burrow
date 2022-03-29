@@ -8,7 +8,9 @@ This package builds on and makes extensive use of the gonum graph library. For m
 All node, edge and graph structures in burrow implement the corresponding interfaces in gonum/graph. More specifically:
 
 	* HubNode, StopNode -> gonum/graph.Node
+	* DeliveryNodes -> gonum/graph.Nodes
 	* DeliveryEdge -> gonum/graph.{Edge, WeightedEdge}
+	* DeliveryEdges -> gonum/graph.{Edges, WeightedEdges}
 	* DeliveryNetwork -> gonum/graph.{Graph, Directed, Weighted}
 */
 package burrow
