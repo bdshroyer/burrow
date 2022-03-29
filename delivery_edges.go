@@ -46,3 +46,8 @@ func (e *DeliveryEdges) Reset() {
 	e.CurrentIdx = 0
 	return
 }
+
+// Returns the current edge pointed to by the iterator. Identical to WeightedEdge, but allows me to create a common interface around gonum's graph iterators.
+func (e DeliveryEdges) Current() graph.WeightedEdge {
+	return e.WeightedEdge()
+}

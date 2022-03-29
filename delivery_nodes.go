@@ -44,3 +44,8 @@ func (d *DeliveryNodes) Next() bool {
 func (d *DeliveryNodes) Reset() {
 	d.CurrentIdx = 0
 }
+
+// Current() returns the current node without advancing the iterator. This essentially the same as Node(), but the more generic name allows me to standardize the interface across some other graph iterator types.
+func (d *DeliveryNodes) Current() graph.Node {
+	return d.Node()
+}

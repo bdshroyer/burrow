@@ -39,6 +39,25 @@ var _ = Describe("DeliveryNodes", func() {
 		})
 	})
 
+	Context("Current", func() {
+		It("Returns the current node pointed to by the iterator", func() {
+			Expect(nodes.Current().ID()).To(BeEquivalentTo(1))
+		})
+
+		It("Returns nil if the collection is empty", func() {
+			nodes := new(burrow.DeliveryNodes)
+			Expect(nodes.Current()).To(BeNil())
+		})
+
+		It("Returns nil if the iterator has been exhausted", func() {
+			for nodes.Next() {
+			}
+			nodes.Next()
+
+			Expect(nodes.Current()).To(BeNil())
+		})
+	})
+
 	Context("Len", func() {
 		It("Returns the number of nodes in a new collection", func() {
 			Expect(nodes.Len()).To(BeEquivalentTo(3))

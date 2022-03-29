@@ -80,6 +80,33 @@ var _ = Describe("DeliveryEdges", func() {
 		})
 	})
 
+	Describe("Current", func() {
+		When("Iterator is not yet exhausted", func() {
+			It("Returns the edge currently pointed to by the iterator", func() {
+				edges := testEdges()
+				edges.CurrentIdx = 2
+				Expect(edges.Current().From().ID()).To(BeEquivalentTo(2))
+				Expect(edges.Current().To().ID()).To(BeEquivalentTo(4))
+				Expect(edges.Current().Weight()).To(BeEquivalentTo(0.4))
+			})
+		})
+
+		When("Iterator is exhausted", func() {
+			It("Returns a nil", func() {
+				edges := testEdges()
+				edges.CurrentIdx = 4
+				Expect(edges.Current()).To(BeNil())
+			})
+		})
+
+		When("Iterator is empty", func() {
+			It("Returns a nil", func() {
+				edges := &burrow.DeliveryEdges{Payload: []*burrow.DeliveryEdge{}}
+				Expect(edges.Current()).To(BeNil())
+			})
+		})
+	})
+
 	Describe("Next", func() {
 		When("Another item exists", func() {
 			It("Returns the next item in the iterator", func() {
