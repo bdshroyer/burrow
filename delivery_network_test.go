@@ -12,9 +12,9 @@ import (
 
 func MakeTestDeliveryNetwork(stops []int64, hubs []int64, edges [][2]int64) *burrow.DeliveryNetwork {
 	G := &burrow.DeliveryNetwork{
-		Stops: make(map[int64]*burrow.StopNode),
-		Hubs:  make(map[int64]*burrow.HubNode),
-		Edges: make(map[int64][]*burrow.DeliveryEdge),
+		Stops:  make(map[int64]*burrow.StopNode),
+		Hubs:   make(map[int64]*burrow.HubNode),
+		DEdges: make(map[int64][]*burrow.DeliveryEdge),
 	}
 
 	for _, stop_index := range stops {
@@ -29,7 +29,7 @@ func MakeTestDeliveryNetwork(stops []int64, hubs []int64, edges [][2]int64) *bur
 		src, dst := G.Node(edge_pair[0]), G.Node(edge_pair[1])
 		srcDN, dstDN := src.(burrow.DeliveryNode), dst.(burrow.DeliveryNode)
 
-		G.Edges[src.ID()] = append(G.Edges[src.ID()], &burrow.DeliveryEdge{Src: srcDN, Dst: dstDN, Wgt: 1.0})
+		G.DEdges[src.ID()] = append(G.DEdges[src.ID()], &burrow.DeliveryEdge{Src: srcDN, Dst: dstDN, Wgt: 1.0})
 	}
 
 	return G
@@ -53,20 +53,25 @@ func stopToStop(src, dst int) *burrow.DeliveryEdge {
 	}
 }
 
-func collectNodes(iter graph.Nodes) []interface{} {
-	lst := make([]interface{}, 0, iter.Len())
+func stopToHub(src, dst int) *burrow.DeliveryEdge {
+	return &burrow.DeliveryEdge{
+		Src: dummyStop(int64(src)),
+		Dst: &burrow.HubNode{int64(dst)},
+	}
+}
 
+func collect[T any](iter burrow.GraphIterator[T]) []T {
 	if iter.Len() == 0 {
-		return lst
+		return []T{}
 	}
 
-	lst = append(lst, iter.Node())
+	lst := make([]T, 0, iter.Len())
+	lst = append(lst, iter.Current())
 
 	for {
-		proceed := iter.Next()
-		lst = append(lst, iter.Node())
-
-		if !proceed {
+		more := iter.Next()
+		lst = append(lst, iter.Current())
+		if !more {
 			break
 		}
 	}
@@ -85,7 +90,7 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 
 			Expect(G.Stops).To(HaveLen(2))
 			Expect(G.Hubs).To(HaveLen(1))
-			Expect(G.Edges).To(HaveLen(2))
+			Expect(G.DEdges).To(HaveLen(2))
 
 			Expect(G.Stops).To(HaveKeyWithValue(
 				BeEquivalentTo(2),
@@ -102,12 +107,12 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 				matchers.MatchNode(&burrow.HubNode{Val: 1}),
 			))
 
-			Expect(G.Edges).To(HaveKeyWithValue(
+			Expect(G.DEdges).To(HaveKeyWithValue(
 				BeEquivalentTo(1),
 				ContainElements(matchers.MatchEdge(hubToStop(1, 4))),
 			))
 
-			Expect(G.Edges).To(HaveKeyWithValue(
+			Expect(G.DEdges).To(HaveKeyWithValue(
 				BeEquivalentTo(2),
 				ContainElements(matchers.MatchEdge(stopToStop(2, 4))),
 			))
@@ -118,7 +123,7 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 
 			Expect(G.Stops).To(HaveLen(0))
 			Expect(G.Hubs).To(HaveLen(0))
-			Expect(G.Edges).To(HaveLen(0))
+			Expect(G.DEdges).To(HaveLen(0))
 		})
 	})
 
@@ -194,7 +199,8 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 
 				Describe("Nodes", func() {
 					It("Returns an iterable collection of the graph's nodes", func() {
-						nodes := collectNodes(G.Nodes())
+						nodeIter := G.Nodes().(*burrow.DeliveryNodes)
+						nodes := collect[graph.Node](nodeIter)
 
 						Expect(nodes).To(ContainElements(
 							matchers.MatchNode(dummyStop(3)),
@@ -213,7 +219,8 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 
 				Describe("From", func() {
 					It("Returns an iterator over nodes reachable from the target", func() {
-						nodes := collectNodes(G.From(1))
+						nodeIter := G.From(1).(*burrow.DeliveryNodes)
+						nodes := collect[graph.Node](nodeIter)
 
 						Expect(len(nodes)).To(Equal(2))
 
@@ -224,19 +231,24 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 					})
 
 					It("Returns an empty collection if target has no outbound edges", func() {
-						nodes := collectNodes(G.From(4))
+						nodeIter := G.From(4).(*burrow.DeliveryNodes)
+						nodes := collect[graph.Node](nodeIter)
+
 						Expect(nodes).To(BeEmpty())
 					})
 
 					It("Returns an empty collection if the targeted node does not exist", func() {
-						nodes := collectNodes(G.To(2))
+						nodeIter := G.From(2).(*burrow.DeliveryNodes)
+						nodes := collect[graph.Node](nodeIter)
+
 						Expect(nodes).To(BeEmpty())
 					})
 				})
 
 				Describe("To", func() {
 					It("Returns an iterable collection of nodes that directly connect to the target", func() {
-						nodes := collectNodes(G.To(4))
+						nodeIter := G.To(4).(*burrow.DeliveryNodes)
+						nodes := collect[graph.Node](nodeIter)
 
 						Expect(len(nodes)).To(Equal(2))
 
@@ -247,12 +259,16 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 					})
 
 					It("Returns an empty list if the target has no inbound edges", func() {
-						nodes := collectNodes(G.To(1))
+						nodeIter := G.To(1).(*burrow.DeliveryNodes)
+						nodes := collect[graph.Node](nodeIter)
+
 						Expect(nodes).To(BeEmpty())
 					})
 
 					It("Returns an empty list if the targeted node does not exist", func() {
-						nodes := collectNodes(G.To(2))
+						nodeIter := G.To(2).(*burrow.DeliveryNodes)
+						nodes := collect[graph.Node](nodeIter)
+
 						Expect(nodes).To(BeEmpty())
 					})
 				})
@@ -286,6 +302,45 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 					Expect(G.HasEdgeFromTo(2, 5)).To(BeFalse())
 				})
 			})
+
+			Describe("Edges", func() {
+				When("The graph has edges", func() {
+					It("returns an iterator over the edges within the network", func() {
+						G := MakeTestDeliveryNetwork(
+							[]int64{2, 4, 3},
+							[]int64{1},
+							[][2]int64{
+								edgeFromPair(1, 4),
+								edgeFromPair(1, 3),
+								edgeFromPair(1, 2),
+								edgeFromPair(2, 3),
+								edgeFromPair(3, 4),
+								edgeFromPair(3, 1),
+							},
+						)
+
+						edgeIter := G.Edges().(*burrow.DeliveryEdges)
+						edges := collect[graph.WeightedEdge](edgeIter)
+
+						Expect(len(edges)).To(Equal(6))
+						Expect(edges).To(ContainElements(
+								matchers.MatchEdge(hubToStop(1, 4)),
+								matchers.MatchEdge(hubToStop(1, 3)),
+								matchers.MatchEdge(hubToStop(1, 2)),
+								matchers.MatchEdge(stopToStop(2, 3)),
+								matchers.MatchEdge(stopToStop(3, 4)),
+								matchers.MatchEdge(stopToHub(3, 1)),
+						))
+					})
+				})
+
+				When("The graph has no edges", func() {
+					It("returns an empty iterator", func() {
+						G := MakeTestDeliveryNetwork([]int64{2}, []int64{1}, [][2]int64{})
+						Expect(G.Edges().Len()).To(Equal(0))
+					})
+				})
+			})
 		})
 
 		Context("Weight functions", func() {
@@ -302,7 +357,7 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 					},
 				)
 
-				G.Edges[3][0].Wgt = 3.0
+				G.DEdges[3][0].Wgt = 3.0
 			})
 
 			Describe("WeightedEdge", func() {

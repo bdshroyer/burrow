@@ -23,17 +23,17 @@ import (
 //
 // The DeliveryNetwork struct stores nodes and edges internally using maps. This decision was made to make accessing structures by index fast and easy; the tradeoff is that it requires a little more work to marshal member structures into collections.
 type DeliveryNetwork struct {
-	Stops map[int64]*StopNode
-	Hubs  map[int64]*HubNode
-	Edges map[int64][]*DeliveryEdge
+	Stops  map[int64]*StopNode
+	Hubs   map[int64]*HubNode
+	DEdges map[int64][]*DeliveryEdge
 }
 
 // NewDeliveryNetwork() bootstraps a new delivery network from a list of indices corresponding to hubs and stops, as well as the index-level description of the edges connecting them.
 func NewDeliveryNetwork(stops []int64, hubs []int64, edges [][2]int64) *DeliveryNetwork {
 	G := &DeliveryNetwork{
-		Stops: make(map[int64]*StopNode),
-		Hubs:  make(map[int64]*HubNode),
-		Edges: make(map[int64][]*DeliveryEdge),
+		Stops:  make(map[int64]*StopNode),
+		Hubs:   make(map[int64]*HubNode),
+		DEdges: make(map[int64][]*DeliveryEdge),
 	}
 
 	for _, stop_index := range stops {
@@ -47,8 +47,8 @@ func NewDeliveryNetwork(stops []int64, hubs []int64, edges [][2]int64) *Delivery
 	for _, edge_pair := range edges {
 		src, dst := G.Node(edge_pair[0]), G.Node(edge_pair[1])
 
-		G.Edges[src.ID()] = append(
-			G.Edges[src.ID()],
+		G.DEdges[src.ID()] = append(
+			G.DEdges[src.ID()],
 			&DeliveryEdge{
 				Src: src.(DeliveryNode),
 				Dst: dst.(DeliveryNode),
@@ -80,9 +80,9 @@ func (G *DeliveryNetwork) Node(id int64) graph.Node {
 
 // HasEdgeBetween returns true if an edge connects the two nodes. This function is present to satisfy the Graph interface requirements, but it is NOT direction-sensitive, even though delivery networks are.
 func (G *DeliveryNetwork) HasEdgeBetween(xid, yid int64) bool {
-	edge_list, ok := G.Edges[xid]
+	edgeList, ok := G.DEdges[xid]
 	if ok {
-		for _, edge := range edge_list {
+		for _, edge := range edgeList {
 			if edge.To().ID() == yid {
 				return true
 			}
@@ -90,9 +90,9 @@ func (G *DeliveryNetwork) HasEdgeBetween(xid, yid int64) bool {
 	}
 
 	// HasEdgeBetween doesn't care about directionality; check for an edge running in the opposite direction.
-	edge_list, ok = G.Edges[yid]
+	edgeList, ok = G.DEdges[yid]
 	if ok {
-		for _, edge := range edge_list {
+		for _, edge := range edgeList {
 			if edge.To().ID() == xid {
 				return true
 			}
@@ -104,7 +104,7 @@ func (G *DeliveryNetwork) HasEdgeBetween(xid, yid int64) bool {
 
 // HasEdgeFromTo is a directional version of HasEdgeBetween(), returning true if an edge exists with uid as a source and vid as a destination, and false otherwise.
 func (G *DeliveryNetwork) HasEdgeFromTo(uid, vid int64) bool {
-	edges, ok := G.Edges[uid]
+	edges, ok := G.DEdges[uid]
 
 	if ok {
 		for _, edge := range edges {
@@ -119,9 +119,9 @@ func (G *DeliveryNetwork) HasEdgeFromTo(uid, vid int64) bool {
 
 // Returns the edge running from uid to vid, or nil if said edge doesn't exist.
 func (G *DeliveryNetwork) Edge(uid, vid int64) graph.Edge {
-	edge_list, ok := G.Edges[uid]
+	edgeList, ok := G.DEdges[uid]
 	if ok {
-		for _, edge := range edge_list {
+		for _, edge := range edgeList {
 			if edge.To().ID() == vid {
 				return edge
 			}
@@ -150,7 +150,7 @@ func (G *DeliveryNetwork) Nodes() graph.Nodes {
 func (G *DeliveryNetwork) From(id int64) graph.Nodes {
 	dn := &DeliveryNodes{Payload: make([]DeliveryNode, 0)}
 
-	reachable, ok := G.Edges[id]
+	reachable, ok := G.DEdges[id]
 
 	if ok {
 		for _, edge := range reachable {
@@ -172,7 +172,7 @@ func (G *DeliveryNetwork) To(id int64) graph.Nodes {
 	}
 
 	for _, src := range G.Hubs {
-		srcEdges, ok := G.Edges[src.ID()]
+		srcEdges, ok := G.DEdges[src.ID()]
 
 		if ok {
 			for _, e := range srcEdges {
@@ -184,7 +184,7 @@ func (G *DeliveryNetwork) To(id int64) graph.Nodes {
 	}
 
 	for _, src := range G.Stops {
-		srcEdges, ok := G.Edges[src.ID()]
+		srcEdges, ok := G.DEdges[src.ID()]
 
 		if ok {
 			for _, e := range srcEdges {
@@ -200,7 +200,7 @@ func (G *DeliveryNetwork) To(id int64) graph.Nodes {
 
 // Returns the weighted edge specified by the two vertex IDs uid, vid. Returns nil if no such edge exists.
 func (G *DeliveryNetwork) WeightedEdge(uid, vid int64) graph.WeightedEdge {
-	edges, ok := G.Edges[uid]
+	edges, ok := G.DEdges[uid]
 	if !ok {
 		return nil
 	}
@@ -214,6 +214,17 @@ func (G *DeliveryNetwork) WeightedEdge(uid, vid int64) graph.WeightedEdge {
 	return nil
 }
 
+// Returns an iterator over all the edges in the network.
+func (G *DeliveryNetwork) Edges() graph.WeightedEdges {
+	edges := &DeliveryEdges{Payload: []*DeliveryEdge{}}
+
+	for _, es := range G.DEdges {
+		edges.Payload = append(edges.Payload, es...)
+	}
+
+	return edges
+}
+
 // Returns the weight of the edge specified, as well a hash-style ok variable. If no edge exists between the specified vertices, then it returns a 0 value for the edge weight, as well as a success value of false.
 //
 // Note that Weight()'s ok return value will be set to true if uid == vid, even though the weight return will be the default option.
@@ -222,7 +233,7 @@ func (G *DeliveryNetwork) Weight(uid, vid int64) (float64, bool) {
 		return 0.0, true
 	}
 
-	eList, ok := G.Edges[uid]
+	eList, ok := G.DEdges[uid]
 	if !ok {
 		return 0.0, false
 	}
