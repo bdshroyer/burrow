@@ -133,7 +133,7 @@ func (G *DeliveryNetwork) Edge(uid, vid int64) graph.Edge {
 
 // Nodes() returns an iterator of type DeliveryNodes, allowing a pass over all the nodes in this network. If the network has no nodes, an empty list is returned.
 func (G *DeliveryNetwork) Nodes() graph.Nodes {
-	dn := &DeliveryNodes{Payload: make([]DeliveryNode, 0)}
+	dn := NewDeliveryNodes()
 
 	for _, v := range G.Hubs {
 		dn.Payload = append(dn.Payload, v)
@@ -148,7 +148,7 @@ func (G *DeliveryNetwork) Nodes() graph.Nodes {
 
 // From() returns an iterator over all nodes reached by id's outbound edges. If the specified node has no outbound edges, an empty list is returned.
 func (G *DeliveryNetwork) From(id int64) graph.Nodes {
-	dn := &DeliveryNodes{Payload: make([]DeliveryNode, 0)}
+	dn := NewDeliveryNodes()
 
 	reachable, ok := G.DEdges[id]
 
@@ -163,7 +163,7 @@ func (G *DeliveryNetwork) From(id int64) graph.Nodes {
 
 // Returns an iterator over all nodes with a direct hop to the node specified by id. If the specified node has no inbound edges, an empty list is returned.
 func (G *DeliveryNetwork) To(id int64) graph.Nodes {
-	dn := &DeliveryNodes{Payload: make([]DeliveryNode, 0)}
+	dn := NewDeliveryNodes()
 
 	dst := G.Node(id)
 
@@ -216,7 +216,7 @@ func (G *DeliveryNetwork) WeightedEdge(uid, vid int64) graph.WeightedEdge {
 
 // Returns an iterator over all the edges in the network.
 func (G *DeliveryNetwork) Edges() graph.WeightedEdges {
-	edges := &DeliveryEdges{Payload: []*DeliveryEdge{}}
+	edges := NewDeliveryEdges()
 
 	for _, es := range G.DEdges {
 		edges.Payload = append(edges.Payload, es...)

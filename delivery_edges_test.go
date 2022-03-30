@@ -22,10 +22,18 @@ var _ = Describe("DeliveryEdges", func() {
 				&burrow.DeliveryEdge{Src: nodes[2], Dst: nodes[4], Wgt: 0.4},
 				&burrow.DeliveryEdge{Src: nodes[4], Dst: nodes[5], Wgt: 2.7},
 			},
+			CurrentIdx: -1,
 		}
 
 		return edges
 	}
+
+	Describe("NewDeliveryEdges", func() {
+		It("Returns a fresh delivery edges iterator", func() {
+			Expect(burrow.NewDeliveryEdges()).NotTo(BeNil())
+			Expect(burrow.NewDeliveryEdges().Len()).To(Equal(0))
+		})
+	})
 
 	Describe("Edge", func() {
 		When("Iterator is not yet exhausted", func() {
@@ -111,6 +119,7 @@ var _ = Describe("DeliveryEdges", func() {
 		When("Another item exists", func() {
 			It("Returns the next item in the iterator", func() {
 				edges := testEdges()
+				edges.Next() // initialize the iterator
 				Expect(edges.Next()).To(BeTrue())
 
 				Expect(edges.WeightedEdge().From().ID()).To(BeEquivalentTo(1))
@@ -119,12 +128,13 @@ var _ = Describe("DeliveryEdges", func() {
 			})
 		})
 
-		When("Only one more item remains in the iterator", func() {
-			It("Returns false", func() {
+		When("On the last item in the collection", func() {
+			It("Returns true", func() {
 				edges := testEdges()
+				edges.Next() // initialize iterator
 				Expect(edges.Next()).To(BeTrue())
 				Expect(edges.Next()).To(BeTrue())
-				Expect(edges.Next()).To(BeFalse())
+				Expect(edges.Next()).To(BeTrue())
 
 				Expect(edges.WeightedEdge().From().ID()).To(BeEquivalentTo(4))
 				Expect(edges.WeightedEdge().To().ID()).To(BeEquivalentTo(5))
@@ -164,7 +174,8 @@ var _ = Describe("DeliveryEdges", func() {
 		When("Iterator is partially traversed", func() {
 			It("Returns the number of items remaining", func() {
 				edges := testEdges()
-				edges.Next()
+				edges.Next() // initialize iterator
+				edges.Next() // traverse one step
 
 				Expect(edges.Len()).To(Equal(3))
 			})
@@ -199,6 +210,8 @@ var _ = Describe("DeliveryEdges", func() {
 	Describe("Reset", func() {
 		It("Returns iterator to the start of the collection", func() {
 			edges := testEdges()
+			edges.Next() // initialize iterator
+
 			firstEdge := edges.WeightedEdge()
 			firstRemainder := edges.Len()
 
@@ -206,6 +219,8 @@ var _ = Describe("DeliveryEdges", func() {
 
 			edges.Reset()
 			Expect(edges.Len()).To(Equal(firstRemainder))
+
+			edges.Next() // reinitialize iterator
 			Expect(edges.WeightedEdge()).To(matchers.MatchEdge(firstEdge))
 		})
 	})

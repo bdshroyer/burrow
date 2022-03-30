@@ -61,19 +61,10 @@ func stopToHub(src, dst int) *burrow.DeliveryEdge {
 }
 
 func collect[T any](iter burrow.GraphIterator[T]) []T {
-	if iter.Len() == 0 {
-		return []T{}
-	}
-
 	lst := make([]T, 0, iter.Len())
-	lst = append(lst, iter.Current())
 
-	for {
-		more := iter.Next()
+	for iter.Next() {
 		lst = append(lst, iter.Current())
-		if !more {
-			break
-		}
 	}
 
 	return lst
@@ -201,6 +192,8 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 					It("Returns an iterable collection of the graph's nodes", func() {
 						nodeIter := G.Nodes().(*burrow.DeliveryNodes)
 						nodes := collect[graph.Node](nodeIter)
+
+						Expect(len(nodes)).To(Equal(3))
 
 						Expect(nodes).To(ContainElements(
 							matchers.MatchNode(dummyStop(3)),

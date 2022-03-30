@@ -8,9 +8,17 @@ type DeliveryEdges struct {
 	CurrentIdx int
 }
 
+// Constructor that returns a properly initialized DeliveryEdges iterator.
+func NewDeliveryEdges() *DeliveryEdges {
+	return &DeliveryEdges{
+		Payload:    []*DeliveryEdge{},
+		CurrentIdx: -1,
+	}
+}
+
 // Returns the current edge as a graph.Edge, or a nil if the iterator is exhausted.
 func (e DeliveryEdges) Edge() graph.Edge {
-	if e.CurrentIdx >= len(e.Payload) {
+	if e.CurrentIdx < 0 || e.CurrentIdx >= len(e.Payload) {
 		return nil
 	}
 
@@ -19,7 +27,7 @@ func (e DeliveryEdges) Edge() graph.Edge {
 
 // Returns the current edge as a graph.WeightedEdge, or a nil if the iterator is exhausted.
 func (e DeliveryEdges) WeightedEdge() graph.WeightedEdge {
-	if e.CurrentIdx >= len(e.Payload) {
+	if e.CurrentIdx < 0 || e.CurrentIdx >= len(e.Payload) {
 		return nil
 	}
 
@@ -32,18 +40,24 @@ func (e DeliveryEdges) WeightedEdge() graph.WeightedEdge {
 func (e *DeliveryEdges) Next() bool {
 	if e.CurrentIdx < len(e.Payload) {
 		e.CurrentIdx++
+		return e.CurrentIdx < len(e.Payload)
 	}
-	return e.CurrentIdx < len(e.Payload)-1
+
+	return false
 }
 
 // Returns the number of items remaining in the iterator.
 func (e DeliveryEdges) Len() int {
+	if e.CurrentIdx == -1 {
+		return len(e.Payload)
+	}
+
 	return len(e.Payload) - e.CurrentIdx
 }
 
 // Returns the iterator's focus to the start of the collection.
 func (e *DeliveryEdges) Reset() {
-	e.CurrentIdx = 0
+	e.CurrentIdx = -1
 	return
 }
 
