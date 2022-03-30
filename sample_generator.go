@@ -20,6 +20,7 @@ type SampleGenerator[T Rangeable] struct {
 	Quit   chan bool
 }
 
+// Creates a new SampleGenerator with an active quit channel. Returns an error if a null or invalid distribution is supplied.
 func NewSampleGenerator[T Rangeable] (distro SampleDistribution[T]) (*SampleGenerator[T], error) {
 	if distro == nil {
 		return nil, fmt.Errorf("Must receive a non-null sample distribution.")
