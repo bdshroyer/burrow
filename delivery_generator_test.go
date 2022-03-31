@@ -12,8 +12,8 @@ import (
 	"github.com/bdshroyer/burrow/matchers"
 )
 
-func testNewStopFactory(counterSeed int64) *burrow.StopFactory {
-	return &burrow.StopFactory{Counter: counterSeed}
+func testNewNodeFactory(counterSeed int64) *burrow.NodeFactory {
+	return &burrow.NodeFactory{Counter: counterSeed}
 }
 
 func testTimeDist(t0 time.Time, window time.Duration) burrow.SampleDistribution[time.Time] {
@@ -124,10 +124,10 @@ var _ = Describe("DeliveryGenerator", func() {
 		})
 	})
 
-	Context("StopFactory", func() {
-		Context("NewStopFactory", func() {
-			It("Returns a StopFactory struct with a counter of 1", func() {
-				sg := burrow.NewStopFactory()
+	Context("NodeFactory", func() {
+		Context("NewNodeFactory", func() {
+			It("Returns a NodeFactory struct with a counter of 1", func() {
+				sg := burrow.NewNodeFactory()
 				Expect(sg).NotTo(BeNil())
 				Expect(sg.Counter).To(BeEquivalentTo(1))
 			})
@@ -135,7 +135,7 @@ var _ = Describe("DeliveryGenerator", func() {
 
 		When("MakeStop is called", func() {
 			It("Returns a new StopNode with an ID matching the generator's counter", func() {
-				sg := testNewStopFactory(1)
+				sg := testNewNodeFactory(1)
 				firstCount := sg.Counter
 				stamp := time.Now()
 
@@ -146,7 +146,7 @@ var _ = Describe("DeliveryGenerator", func() {
 			})
 
 			It("Increments the generator's counter", func() {
-				sg := testNewStopFactory(1)
+				sg := testNewNodeFactory(1)
 				firstCount := sg.Counter
 				stamp := time.Now()
 
@@ -157,22 +157,26 @@ var _ = Describe("DeliveryGenerator", func() {
 	})
 
 	Context("MakeStopDAG", func() {
+		const window time.Duration = 24 * time.Hour
+
+		var (
+			today time.Time
+			err error
+		)
+
+		BeforeEach(func() {
+				today, err = time.Parse(time.RFC3339, "2022-03-25T00:00:00-04:00")
+				Expect(err).NotTo(HaveOccurred())
+		})
+
 		When("Invoked with a positive integer", func() {
 			It("Returns a DAG of stop nodes", func() {
-				window := time.Duration(rand.Int63n(int64(24 * time.Hour)))
-				today, err := time.Parse(time.RFC3339, "2022-03-25T00:00:00-04:00")
-				Expect(err).NotTo(HaveOccurred())
-
 				dag, err := burrow.MakeStopDAG(3, testTimeDist(today, window))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(dag.Nodes().Len()).To(Equal(3))
 			})
 
 			It("Has edges that comply with the happens-before relation", func() {
-				window := 24 * time.Hour
-				today, err := time.Parse(time.RFC3339, "2022-03-25T00:00:00-04:00")
-				Expect(err).NotTo(HaveOccurred())
-
 				dag, err := burrow.MakeStopDAG(3, testTimeDist(today, window))
 				Expect(err).NotTo(HaveOccurred())
 
@@ -189,17 +193,10 @@ var _ = Describe("DeliveryGenerator", func() {
 					Expect(from.Timestamp).To(BeTemporally("<", to.Timestamp))
 				}
 			})
-
-			Context("When one or more stops occurs at the same time", func() {
-			})
 		})
 
 		When("Invoked with a zero", func() {
-			It("Creats an empty DAG", func() {
-				window := time.Duration(rand.Int63n(int64(24 * time.Hour)))
-				today, err := time.Parse(time.RFC3339, "2022-03-25T00:00:00-04:00")
-				Expect(err).NotTo(HaveOccurred())
-
+			It("Creates an empty DAG", func() {
 				dag, err := burrow.MakeStopDAG(0, testTimeDist(today, window))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(dag.Nodes().Len()).To(Equal(0))
