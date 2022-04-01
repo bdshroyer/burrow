@@ -1,6 +1,7 @@
 package burrow
 
 import (
+	"fmt"
 	"time"
 	"container/heap"
 )
@@ -60,23 +61,22 @@ func (s *StopNodeHeap) Pop() any {
 
 // MakeStopDAG produces a directed acyclic DeliveryNetwork comprised of StopNodes whose timestamps are generated randomly according to the given distribution. Errors out if passed a bad sample distribution.
 func MakeStopDAG (newNodeCount uint, distro SampleDistribution[time.Time]) (*DeliveryNetwork, error) {
+	if distro == nil {
+		return nil, fmt.Errorf("Must receive a non-null sample distribution.")
+	}
+
 	G := &DeliveryNetwork{
 		Hubs: make(map[int64]*HubNode),
 		Stops: make(map[int64]*StopNode),
 		DEdges: make(map[int64][]*DeliveryEdge),
 	}
 
-	generator, err := NewSampleGenerator(distro)
-	if err != nil {
-		return nil, err
-	}
-
 	nodeHeap := new(StopNodeHeap)
 	stops := NewNodeFactory()
 
 	// Generate new stop nodes and store them on a sorted min-heap.
-	for sample := range generator.Sample(newNodeCount) {
-		nodeHeap.Push(stops.MakeStop(sample))
+	for i := 0; uint(i) < newNodeCount; i++ {
+		nodeHeap.Push(stops.MakeStop(distro()))
 	}
 
 
@@ -99,5 +99,5 @@ func MakeStopDAG (newNodeCount uint, distro SampleDistribution[time.Time]) (*Del
 		G.Stops[newStop.ID()] = newStop
 	}
 
-	return G, err
+	return G, nil
 }
