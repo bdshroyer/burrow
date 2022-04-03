@@ -17,9 +17,17 @@ func NewNodeFactory() *NodeFactory {
 }
 
 // Produces a new stop node with timestamp ts. This operation increases the factory's counter.
-func (sf *NodeFactory) MakeStop(ts time.Time) *StopNode {
-	output := &StopNode{Val: sf.Counter, Timestamp: ts}
-	sf.Counter++
+func (nf *NodeFactory) MakeStop(ts time.Time) *StopNode {
+	output := &StopNode{Val: nf.Counter, Timestamp: ts}
+	nf.Counter++
+
+	return output
+}
+
+// Produces a new hub node. The operation increases the factory's counter.
+func (nf *NodeFactory) MakeHub() *HubNode {
+	output := &HubNode{Val: nf.Counter}
+	nf.Counter++
 
 	return output
 }
@@ -101,3 +109,66 @@ func MakeStopDAG (newNodeCount uint, distro SampleDistribution[time.Time]) (*Del
 
 	return G, nil
 }
+
+func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[time.Time]) (*DeliveryNetwork, error) {
+	if distro == nil {
+		return nil, fmt.Errorf("Must receive a non-null sample distribution.")
+	}
+
+	G := &DeliveryNetwork{
+		Hubs: make(map[int64]*HubNode),
+		Stops: make(map[int64]*StopNode),
+		DEdges: make(map[int64][]*DeliveryEdge),
+	}
+
+	nFactory := NewNodeFactory()
+
+	for i := 0; uint(i) < nHubNodes; i++ {
+		newHub := nFactory.MakeHub()
+		G.Hubs[newHub.ID()] = newHub
+	}
+
+	nodeHeap := new(StopNodeHeap)
+
+	// Generate new stop nodes and store them on a sorted min-heap.
+	for i := 0; uint(i) < nStopNodes; i++ {
+		newStop := nFactory.MakeStop(distro())
+		nodeHeap.Push(nFactory.MakeStop(distro()))
+
+		// Add edge nodes linking each hub node to each stop node in both directions.
+		for _, hub := range G.Hubs {
+			edge := &DeliveryEdge{
+				Src: hub,
+				Dst: newStop,
+				Wgt: 1.0,
+			}
+
+			G.DEdges[hub.ID()] = append(G.DEdges[hub.ID()], edge)
+			G.DEdges[newStop.ID()] = append(G.DEdges[newStop.ID()], edge.ReversedEdge().(*DeliveryEdge))
+		}
+	}
+
+	// Extract nodes in order from the heap, connect its predecessors to it, and store it in the graph.
+	// Since each node stored in the graph prior to the given node is an earlier stop (due to the min-heap property), a new edge should be drawn from each node in the graph to the new node.
+	// The exception to this rule is if two nodes share the exact same timestamp.
+	for nodeHeap.Len() > 0 {
+		newStop := nodeHeap.Pop().(*StopNode)
+
+		for _, prevStop := range G.Stops {
+			if prevStop.Timestamp.Before(newStop.Timestamp) {
+				edge := &DeliveryEdge{
+					Src: prevStop,
+					Dst: newStop,
+					Wgt: float64(newStop.Timestamp.Sub(prevStop.Timestamp)),
+				}
+
+				G.DEdges[prevStop.ID()] = append(G.DEdges[prevStop.ID()], edge)
+			}
+		}
+
+		G.Stops[newStop.ID()] = newStop
+	}
+
+	return G, nil
+}
+

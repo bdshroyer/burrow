@@ -25,6 +25,8 @@ func testTimeDist(t0 time.Time, window time.Duration) burrow.SampleDistribution[
 	return burrow.SampleDistribution[time.Time](payload)
 }
 
+const window time.Duration = 24 * time.Hour
+
 var _ = Describe("DeliveryGenerator", func() {
 	Describe("StopNodeHeap", func() {
 
@@ -127,38 +129,48 @@ var _ = Describe("DeliveryGenerator", func() {
 	Context("NodeFactory", func() {
 		Context("NewNodeFactory", func() {
 			It("Returns a NodeFactory struct with a counter of 1", func() {
-				sg := burrow.NewNodeFactory()
-				Expect(sg).NotTo(BeNil())
-				Expect(sg.Counter).To(BeEquivalentTo(1))
+				nf := burrow.NewNodeFactory()
+				Expect(nf).NotTo(BeNil())
+				Expect(nf.Counter).To(BeEquivalentTo(1))
 			})
 		})
 
 		When("MakeStop is called", func() {
 			It("Returns a new StopNode with an ID matching the generator's counter", func() {
-				sg := testNewNodeFactory(1)
-				firstCount := sg.Counter
+				nf := testNewNodeFactory(1)
+				firstCount := nf.Counter
 				stamp := time.Now()
 
-				newNode := sg.MakeStop(stamp)
+				newNode := nf.MakeStop(stamp)
 				Expect(newNode).NotTo(BeNil())
-				Expect(newNode.ID()).To(BeEquivalentTo(firstCount))
-				Expect(newNode.Timestamp).To(BeEquivalentTo(stamp))
+				Expect(newNode.ID()).To(Equal(firstCount))
+				Expect(newNode.Timestamp).To(Equal(stamp))
 			})
 
 			It("Increments the generator's counter", func() {
-				sg := testNewNodeFactory(1)
-				firstCount := sg.Counter
+				nf := testNewNodeFactory(1)
+				firstCount := nf.Counter
 				stamp := time.Now()
 
-				sg.MakeStop(stamp)
-				Expect(sg.Counter).To(BeEquivalentTo(firstCount + 1))
+				nf.MakeStop(stamp)
+				Expect(nf.Counter).To(Equal(firstCount + 1))
+			})
+		})
+
+		When("MakeHub is called", func() {
+			It("Increments the generator's counter", func() {
+				nf := testNewNodeFactory(1)
+				firstCount := nf.Counter
+
+				newHub := nf.MakeHub()
+				Expect(newHub).NotTo(BeNil())
+				Expect(newHub.ID()).To(Equal(firstCount))
+				Expect(nf.Counter).To(Equal(firstCount + 1))
 			})
 		})
 	})
 
 	Context("MakeStopDAG", func() {
-		const window time.Duration = 24 * time.Hour
-
 		var (
 			today time.Time
 			err error
@@ -206,6 +218,79 @@ var _ = Describe("DeliveryGenerator", func() {
 		When("Passed an empty distribution", func() {
 			It("Returns an error", func() {
 				dag, err := burrow.MakeStopDAG(3, nil)
+				Expect(err).To(MatchError("Must receive a non-null sample distribution."))
+				Expect(dag).To(BeNil())
+			})
+		})
+	})
+
+	Context("MakeDeliveryNetwork", func() {
+		var (
+			today time.Time
+			err error
+		)
+
+		BeforeEach(func() {
+				today, err = time.Parse(time.RFC3339, "2022-03-25T00:00:00-04:00")
+				Expect(err).NotTo(HaveOccurred())
+		})
+
+		When("Given a distro and a non-zero number of stop and hub nodes", func() {
+			It("Creates a delivery network", func() {
+				G, err := burrow.MakeDeliveryNetwork(2, 3, testTimeDist(today, window))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(G).NotTo(BeNil())
+
+				Expect(len(G.Hubs)).To(Equal(2))
+				Expect(len(G.Stops)).To(Equal(3))
+
+				// hub->stop + stop->hub + stop->stop
+				//   = 2 * hubs * stops + (stops-1) * stops / 2
+				//   = 2 * 2 * 3 + (3-1) * 3 / 2
+				//   = 15
+				Expect(G.Edges().Len()).To(Equal(15))
+			})
+
+			It("Has stop-to-stop edges that all comply with the happens-before relation", func() {
+				G, err := burrow.MakeDeliveryNetwork(2, 3, testTimeDist(today, window))
+				Expect(err).NotTo(HaveOccurred())
+
+				edges := G.Edges().(*burrow.DeliveryEdges)
+				stopEdgeCount := 0
+
+				// Each edge must have the property that the source is earlier than the destination.
+				for edges.Next() {
+					from := edges.Current().From().(burrow.DeliveryNode)
+					to := edges.Current().To().(burrow.DeliveryNode)
+
+					if from.IsHub() || to.IsHub() {
+						continue
+					}
+
+					stopEdgeCount++
+					fromStop := from.(*burrow.StopNode)
+					toStop := to.(*burrow.StopNode)
+					Expect(fromStop.Timestamp).To(BeTemporally("<", toStop.Timestamp))
+				}
+
+				// Edges should be created if timestamps are not identical.
+				Expect(stopEdgeCount).To(BeNumerically(">", 0))
+			})
+		})
+
+		When("Invoked with a hub count of 0", func() {
+			It("Creates a stop-node DAG", func() {
+				dag, err := burrow.MakeDeliveryNetwork(0, 3, testTimeDist(today, window))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(dag.Hubs)).To(Equal(0))
+				Expect(len(dag.Stops)).To(Equal(3))
+				Expect(dag.Edges().Len()).To(Equal(3))
+			})
+		})
+
+		When("Passed an empty distribution", func() {
+			It("Returns an error", func() {
+				dag, err := burrow.MakeDeliveryNetwork(2, 3, nil)
 				Expect(err).To(MatchError("Must receive a non-null sample distribution."))
 				Expect(dag).To(BeNil())
 			})
