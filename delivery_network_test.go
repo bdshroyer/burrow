@@ -1,6 +1,8 @@
 package burrow_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -72,49 +74,17 @@ func collect[T any](iter burrow.GraphIterator[T]) []T {
 
 var _ = Describe("DeliveryNetwork functionality", func() {
 	Describe("NewDeliveryNetwork", func() {
-		It("Returns a delivery network containing the specified indices", func() {
-			G := burrow.NewDeliveryNetwork(
-				[]int64{2, 4},
-				[]int64{1},
-				[][2]int64{edgeFromPair(2, 4), edgeFromPair(1, 4)},
-			)
+		It("Returns an empty delivery network with intialized internal containers", func() {
+			G := burrow.NewDeliveryNetwork()
 
-			Expect(G.Stops).To(HaveLen(2))
-			Expect(G.Hubs).To(HaveLen(1))
-			Expect(G.DEdges).To(HaveLen(2))
+			Expect(G.Hubs).NotTo(BeNil())
+			Expect(G.Hubs).To(BeEmpty())
 
-			Expect(G.Stops).To(HaveKeyWithValue(
-				BeEquivalentTo(2),
-				matchers.MatchNode(dummyStop(2)),
-			))
+			Expect(G.Stops).NotTo(BeNil())
+			Expect(G.Stops).To(BeEmpty())
 
-			Expect(G.Stops).To(HaveKeyWithValue(
-				BeEquivalentTo(4),
-				matchers.MatchNode(dummyStop(4)),
-			))
-
-			Expect(G.Hubs).To(HaveKeyWithValue(
-				BeEquivalentTo(1),
-				matchers.MatchNode(&burrow.HubNode{Val: 1}),
-			))
-
-			Expect(G.DEdges).To(HaveKeyWithValue(
-				BeEquivalentTo(1),
-				ContainElements(matchers.MatchEdge(hubToStop(1, 4))),
-			))
-
-			Expect(G.DEdges).To(HaveKeyWithValue(
-				BeEquivalentTo(2),
-				ContainElements(matchers.MatchEdge(stopToStop(2, 4))),
-			))
-		})
-
-		It("Returns an empty network when passed no nodes", func() {
-			G := burrow.NewDeliveryNetwork([]int64{}, []int64{}, [][2]int64{})
-
-			Expect(G.Stops).To(HaveLen(0))
-			Expect(G.Hubs).To(HaveLen(0))
-			Expect(G.DEdges).To(HaveLen(0))
+			Expect(G.DEdges).NotTo(BeNil())
+			Expect(G.DEdges).To(BeEmpty())
 		})
 	})
 
@@ -390,6 +360,69 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 					Expect(weight).To(BeZero())
 				})
 			})
+		})
+	})
+
+
+	Context("GetStopGraph", func() {
+		It("Returns the subgraph formed by the stop nodes", func() {
+			G := &burrow.DeliveryNetwork{
+				Stops: map[int64]*burrow.StopNode{
+					4: &burrow.StopNode{Val: 4, Timestamp: time.Now().Add(1 * time.Hour)},
+					3: &burrow.StopNode{Val: 3, Timestamp: time.Now().Add(2 * time.Hour)},
+					5: &burrow.StopNode{Val: 5, Timestamp: time.Now().Add(3 * time.Hour)},
+				},
+				Hubs: map[int64]*burrow.HubNode{
+					1: &burrow.HubNode{Val: 1},
+					2: &burrow.HubNode{Val: 2},
+				},
+				DEdges : make(map[int64][]*burrow.DeliveryEdge),
+			}
+
+			G.DEdges[1] = append(G.DEdges[1], &burrow.DeliveryEdge{Src: G.Hubs[1], Dst: G.Stops[3], Wgt: 1.0})
+			G.DEdges[1] = append(G.DEdges[1], &burrow.DeliveryEdge{Src: G.Hubs[1], Dst: G.Stops[5], Wgt: 2.0})
+			G.DEdges[1] = append(G.DEdges[1], &burrow.DeliveryEdge{Src: G.Hubs[1], Dst: G.Stops[4], Wgt: 3.0})
+			G.DEdges[2] = append(G.DEdges[2], &burrow.DeliveryEdge{Src: G.Hubs[2], Dst: G.Stops[4], Wgt: 4.0})
+			G.DEdges[3] = append(G.DEdges[3], &burrow.DeliveryEdge{Src: G.Stops[3], Dst: G.Hubs[2], Wgt: 5.0})
+			G.DEdges[3] = append(G.DEdges[3], &burrow.DeliveryEdge{Src: G.Stops[3], Dst: G.Stops[5], Wgt: 6.0})
+			G.DEdges[3] = append(G.DEdges[3], &burrow.DeliveryEdge{Src: G.Stops[3], Dst: G.Stops[4], Wgt: 7.0})
+			G.DEdges[4] = append(G.DEdges[4], &burrow.DeliveryEdge{Src: G.Stops[4], Dst: G.Stops[5], Wgt: 8.0})
+
+			H := G.GetStopGraph()
+
+			Expect(len(H.Hubs)).To(BeZero())
+			Expect(len(H.Stops)).To(Equal(len(G.Stops)))
+			Expect(H.Edges().Len()).To(Equal(3))
+
+			// match edges to previous graph
+			edgeIter, ok := H.Edges().(*burrow.DeliveryEdges)
+			Expect(ok).To(BeTrue())
+			edges := collect[graph.WeightedEdge](edgeIter)
+
+			Expect(edges).To(ContainElements(
+				matchers.MatchEdge(&burrow.DeliveryEdge{Src: G.Stops[3], Dst: G.Stops[4], Wgt: 7.0}),
+				matchers.MatchEdge(&burrow.DeliveryEdge{Src: G.Stops[3], Dst: G.Stops[5], Wgt: 6.0}),
+				matchers.MatchEdge(&burrow.DeliveryEdge{Src: G.Stops[4], Dst: G.Stops[5], Wgt: 8.0}),
+			))
+		})
+
+		It("Returns an empty graph if there are no stop nodes", func() {
+			G := &burrow.DeliveryNetwork{
+				Stops: map[int64]*burrow.StopNode{},
+				Hubs: map[int64]*burrow.HubNode{
+					1: &burrow.HubNode{Val: 1},
+					2: &burrow.HubNode{Val: 2},
+				},
+				DEdges : make(map[int64][]*burrow.DeliveryEdge),
+			}
+
+			G.DEdges[2] = append(G.DEdges[2], &burrow.DeliveryEdge{Src: G.Hubs[2], Dst: G.Hubs[1], Wgt: 4.0})
+
+			H := G.GetStopGraph()
+			Expect(H).NotTo(BeNil())
+			Expect(H.Stops).To(BeEmpty())
+			Expect(H.Hubs).To(BeEmpty())
+			Expect(H.DEdges).To(BeEmpty())
 		})
 	})
 })

@@ -28,32 +28,12 @@ type DeliveryNetwork struct {
 	DEdges map[int64][]*DeliveryEdge
 }
 
-// NewDeliveryNetwork() bootstraps a new delivery network from a list of indices corresponding to hubs and stops, as well as the index-level description of the edges connecting them.
-func NewDeliveryNetwork(stops []int64, hubs []int64, edges [][2]int64) *DeliveryNetwork {
+// NewDeliveryNetwork() bootstraps an empty delivery network, initializing all internal containers.
+func NewDeliveryNetwork() *DeliveryNetwork {
 	G := &DeliveryNetwork{
 		Stops:  make(map[int64]*StopNode),
 		Hubs:   make(map[int64]*HubNode),
 		DEdges: make(map[int64][]*DeliveryEdge),
-	}
-
-	for _, stop_index := range stops {
-		G.Stops[stop_index] = &StopNode{Val: stop_index}
-	}
-
-	for _, hub_index := range hubs {
-		G.Hubs[hub_index] = &HubNode{Val: hub_index}
-	}
-
-	for _, edge_pair := range edges {
-		src, dst := G.Node(edge_pair[0]), G.Node(edge_pair[1])
-
-		G.DEdges[src.ID()] = append(
-			G.DEdges[src.ID()],
-			&DeliveryEdge{
-				Src: src.(DeliveryNode),
-				Dst: dst.(DeliveryNode),
-			},
-		)
 	}
 
 	return G
@@ -245,4 +225,39 @@ func (G *DeliveryNetwork) Weight(uid, vid int64) (float64, bool) {
 	}
 
 	return 0.0, false
+}
+
+// GetStopGraph() extracts the subgraph formed by the stop nodes and stop-to-stop edges of G.
+// For the time being, this is a copying (i.e., non-destructive) operation.
+func (G *DeliveryNetwork) GetStopGraph() *DeliveryNetwork {
+	H := NewDeliveryNetwork()
+
+	for k, v := range G.Stops {
+		H.Stops[k] = &StopNode{Val: v.Val, Timestamp: v.Timestamp}
+	}
+
+	for stop, _ := range H.Stops {
+		edges, ok := G.DEdges[stop]
+		if ok {
+			for i := 0; i < len(edges); i++ {
+				// Skip any edges that connect to hub nodes
+				if edges[i].Dst.IsHub() {
+					continue
+				}
+
+				src := edges[i].Src.(*StopNode)
+				dst := edges[i].Dst.(*StopNode)
+
+				newEdge := &DeliveryEdge{
+					Src: &StopNode{Val: src.Val, Timestamp: src.Timestamp},
+					Dst: &StopNode{Val: dst.Val, Timestamp: dst.Timestamp},
+					Wgt: edges[i].Wgt,
+				}
+
+				H.DEdges[stop] = append(H.DEdges[stop], newEdge)
+			}
+		}
+	}
+
+	return H
 }

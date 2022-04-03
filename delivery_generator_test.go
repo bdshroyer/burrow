@@ -170,60 +170,6 @@ var _ = Describe("DeliveryGenerator", func() {
 		})
 	})
 
-	Context("MakeStopDAG", func() {
-		var (
-			today time.Time
-			err error
-		)
-
-		BeforeEach(func() {
-				today, err = time.Parse(time.RFC3339, "2022-03-25T00:00:00-04:00")
-				Expect(err).NotTo(HaveOccurred())
-		})
-
-		When("Invoked with a positive integer", func() {
-			It("Returns a DAG of stop nodes", func() {
-				dag, err := burrow.MakeStopDAG(3, testTimeDist(today, window))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(dag.Nodes().Len()).To(Equal(3))
-			})
-
-			It("Has edges that comply with the happens-before relation", func() {
-				dag, err := burrow.MakeStopDAG(3, testTimeDist(today, window))
-				Expect(err).NotTo(HaveOccurred())
-
-				edges := dag.Edges().(*burrow.DeliveryEdges)
-
-				// Edges should be created if timestamps are not identical.
-				Expect(edges.Len()).To(BeNumerically(">", 0))
-
-				// Each edge must have the property that the source is earlier than the destination.
-				for edges.Next() {
-					from := edges.Current().From().(*burrow.StopNode)
-					to := edges.Current().To().(*burrow.StopNode)
-
-					Expect(from.Timestamp).To(BeTemporally("<", to.Timestamp))
-				}
-			})
-		})
-
-		When("Invoked with a zero", func() {
-			It("Creates an empty DAG", func() {
-				dag, err := burrow.MakeStopDAG(0, testTimeDist(today, window))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(dag.Nodes().Len()).To(Equal(0))
-			})
-		})
-
-		When("Passed an empty distribution", func() {
-			It("Returns an error", func() {
-				dag, err := burrow.MakeStopDAG(3, nil)
-				Expect(err).To(MatchError("Must receive a non-null sample distribution."))
-				Expect(dag).To(BeNil())
-			})
-		})
-	})
-
 	Context("MakeDeliveryNetwork", func() {
 		var (
 			today time.Time

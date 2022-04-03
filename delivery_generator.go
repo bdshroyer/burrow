@@ -67,49 +67,8 @@ func (s *StopNodeHeap) Pop() any {
 	return payload
 }
 
-// MakeStopDAG produces a directed acyclic DeliveryNetwork comprised of StopNodes whose timestamps are generated randomly according to the given distribution. Errors out if passed a bad sample distribution.
-func MakeStopDAG (newNodeCount uint, distro SampleDistribution[time.Time]) (*DeliveryNetwork, error) {
-	if distro == nil {
-		return nil, fmt.Errorf("Must receive a non-null sample distribution.")
-	}
-
-	G := &DeliveryNetwork{
-		Hubs: make(map[int64]*HubNode),
-		Stops: make(map[int64]*StopNode),
-		DEdges: make(map[int64][]*DeliveryEdge),
-	}
-
-	nodeHeap := new(StopNodeHeap)
-	stops := NewNodeFactory()
-
-	// Generate new stop nodes and store them on a sorted min-heap.
-	for i := 0; uint(i) < newNodeCount; i++ {
-		nodeHeap.Push(stops.MakeStop(distro()))
-	}
-
-
-	// Extract nodes in order from the heap, connect its predecessors to it, and store it in the graph.
-	// Since each node stored in the graph prior to the given node is an earlier stop (due to the min-heap property), a new edge should be drawn from each node in the graph to the new node.
-	// The exception to this rule is if two nodes share the exact same timestamp.
-	for nodeHeap.Len() > 0 {
-		newStop := nodeHeap.Pop().(*StopNode)
-		for _, prevStop := range G.Stops {
-			if prevStop.Timestamp.Before(newStop.Timestamp) {
-				edge := &DeliveryEdge{
-					Src: prevStop,
-					Dst: newStop,
-					Wgt: float64(newStop.Timestamp.Sub(prevStop.Timestamp)),
-				}
-				G.DEdges[prevStop.ID()] = append(G.DEdges[prevStop.ID()], edge)
-			}
-		}
-
-		G.Stops[newStop.ID()] = newStop
-	}
-
-	return G, nil
-}
-
+// Creates a delivery network with the specified number of hubs and stops  using the provided distribution.
+// Returns an error if distro is not a valid sample distribution.
 func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[time.Time]) (*DeliveryNetwork, error) {
 	if distro == nil {
 		return nil, fmt.Errorf("Must receive a non-null sample distribution.")
