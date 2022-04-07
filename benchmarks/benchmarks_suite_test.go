@@ -1,4 +1,4 @@
-package burrow_test
+package benchmarks_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestBurrow(t *testing.T) {
+func TestBenchmarks(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Burrow Suite")
+	RunSpecs(t, "Benchmarks Suite")
 }
