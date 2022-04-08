@@ -11,7 +11,7 @@ type NodeFactory struct {
 	Counter int64
 }
 
-// NewNodeFactory initializes a new stop factory where the counter is set above 0. The start of the counter is not especially significant, but it at least means that node.ID() > 0 is a decent smoke test. 
+// NewNodeFactory initializes a new stop factory where the counter is set above 0. The start of the counter is not especially significant, but it at least means that node.ID() > 0 is a decent smoke test.
 func NewNodeFactory() *NodeFactory {
 	return &NodeFactory{Counter: 1}
 }
@@ -98,7 +98,7 @@ func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[t
 		nodeHeap.Push(nFactory.MakeStop(distro()))
 
 		// Allocation hint based on the assumption that most nodes will have an edge leading back to each hub
-		G.DEdges[newStop.ID()] = make([]*DeliveryEdge, 0, nHubNodes)
+		G.DEdges[newStop.ID()] = make([]*DeliveryEdge, 0, nHubNodes + (nStopNodes / 2))
 
 		// Add edge nodes linking each hub node to each stop node in both directions.
 		for _, hub := range G.Hubs {
@@ -117,21 +117,23 @@ func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[t
 	// Since each node stored in the graph prior to the given node is an earlier stop (due to the min-heap property), a new edge should be drawn from each node in the graph to the new node.
 	// The exception to this rule is if two nodes share the exact same timestamp.
 	for nodeHeap.Len() > 0 {
-		newStop := nodeHeap.Pop().(*StopNode)
+		nextStop := nodeHeap.Pop().(*StopNode)
 
 		for _, prevStop := range G.Stops {
-			if prevStop.Timestamp.Before(newStop.Timestamp) {
+			weight := float64(nextStop.Timestamp.Sub(prevStop.Timestamp))
+
+			if weight > 0.0 {
 				edge := &DeliveryEdge{
 					Src: prevStop,
-					Dst: newStop,
-					Wgt: float64(newStop.Timestamp.Sub(prevStop.Timestamp)),
+					Dst: nextStop,
+					Wgt: weight,
 				}
 
 				G.DEdges[prevStop.ID()] = append(G.DEdges[prevStop.ID()], edge)
 			}
 		}
 
-		G.Stops[newStop.ID()] = newStop
+		G.Stops[nextStop.ID()] = nextStop
 	}
 
 	return G, nil
