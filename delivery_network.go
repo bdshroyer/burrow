@@ -236,7 +236,7 @@ func (G *DeliveryNetwork) GetStopGraph() *DeliveryNetwork {
 		H.Stops[k] = &StopNode{Val: v.Val, Timestamp: v.Timestamp}
 	}
 
-	for stop, _ := range H.Stops {
+	for stop, stopNode := range H.Stops {
 		edges, ok := G.DEdges[stop]
 		if ok {
 			for i := 0; i < len(edges); i++ {
@@ -245,12 +245,12 @@ func (G *DeliveryNetwork) GetStopGraph() *DeliveryNetwork {
 					continue
 				}
 
-				src := edges[i].Src.(*StopNode)
-				dst := edges[i].Dst.(*StopNode)
+				src := stopNode
+				dst := H.Stops[edges[i].To().ID()]
 
 				newEdge := &DeliveryEdge{
-					Src: &StopNode{Val: src.Val, Timestamp: src.Timestamp},
-					Dst: &StopNode{Val: dst.Val, Timestamp: dst.Timestamp},
+					Src: src,
+					Dst: dst,
 					Wgt: edges[i].Wgt,
 				}
 
