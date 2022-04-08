@@ -75,9 +75,9 @@ func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[t
 	}
 
 	G := &DeliveryNetwork{
-		Hubs: make(map[int64]*HubNode),
-		Stops: make(map[int64]*StopNode),
-		DEdges: make(map[int64][]*DeliveryEdge),
+		Hubs: make(map[int64]*HubNode, nHubNodes),
+		Stops: make(map[int64]*StopNode, nStopNodes),
+		DEdges: make(map[int64][]*DeliveryEdge, nHubNodes + nStopNodes),
 	}
 
 	nFactory := NewNodeFactory()
@@ -85,21 +85,27 @@ func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[t
 	for i := 0; uint(i) < nHubNodes; i++ {
 		newHub := nFactory.MakeHub()
 		G.Hubs[newHub.ID()] = newHub
+
+		// Allocation hint based on the assumption that most stops are reachable by all hubs
+		G.DEdges[newHub.ID()] = make([]*DeliveryEdge, 0, nStopNodes)
 	}
 
-	nodeHeap := new(StopNodeHeap)
+	nodeHeap := &StopNodeHeap{Payload: make([]*StopNode, 0, nStopNodes)}
 
 	// Generate new stop nodes and store them on a sorted min-heap.
 	for i := 0; uint(i) < nStopNodes; i++ {
 		newStop := nFactory.MakeStop(distro())
 		nodeHeap.Push(nFactory.MakeStop(distro()))
 
+		// Allocation hint based on the assumption that most nodes will have an edge leading back to each hub
+		G.DEdges[newStop.ID()] = make([]*DeliveryEdge, 0, nHubNodes)
+
 		// Add edge nodes linking each hub node to each stop node in both directions.
 		for _, hub := range G.Hubs {
 			edge := &DeliveryEdge{
 				Src: hub,
 				Dst: newStop,
-				Wgt: 1.0,
+				Wgt: float64(1 * time.Hour),
 			}
 
 			G.DEdges[hub.ID()] = append(G.DEdges[hub.ID()], edge)
