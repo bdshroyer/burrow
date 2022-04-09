@@ -95,10 +95,10 @@ func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[t
 	// Generate new stop nodes and store them on a sorted min-heap.
 	for i := 0; uint(i) < nStopNodes; i++ {
 		newStop := nFactory.MakeStop(distro())
-		nodeHeap.Push(nFactory.MakeStop(distro()))
+		nodeHeap.Push(newStop)
 
 		// Allocation hint based on the assumption that most nodes will have an edge leading back to each hub
-		G.DEdges[newStop.ID()] = make([]*DeliveryEdge, 0, nHubNodes + (nStopNodes / 2))
+		G.DEdges[newStop.ID()] = make([]*DeliveryEdge, 0, nHubNodes + (nStopNodes - uint(i) + 1))
 
 		// Add edge nodes linking each hub node to each stop node in both directions.
 		for _, hub := range G.Hubs {
