@@ -51,6 +51,7 @@ func (e *edgeStub1) ReversedEdge() graph.Edge {
 type edgeStub2 struct {
 	Src graph.Node
 	Dst graph.Node
+	Wgt float64
 }
 
 func (e *edgeStub2) From() graph.Node {
@@ -63,4 +64,8 @@ func (e *edgeStub2) To() graph.Node {
 
 func (e *edgeStub2) ReversedEdge() graph.Edge {
 	return &edgeStub2{Src: e.Dst, Dst: e.Src}
+}
+
+func (e *edgeStub2) Weight() float64 {
+	return e.Wgt
 }

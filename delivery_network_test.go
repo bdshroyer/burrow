@@ -45,6 +45,7 @@ func hubToStop(src, dst int) *burrow.DeliveryEdge {
 	return &burrow.DeliveryEdge{
 		Src: &burrow.HubNode{int64(src)},
 		Dst: dummyStop(int64(dst)),
+		Wgt: 1.0,
 	}
 }
 
@@ -52,6 +53,7 @@ func stopToStop(src, dst int) *burrow.DeliveryEdge {
 	return &burrow.DeliveryEdge{
 		Src: dummyStop(int64(src)),
 		Dst: dummyStop(int64(dst)),
+		Wgt: 1.0,
 	}
 }
 
@@ -59,6 +61,7 @@ func stopToHub(src, dst int) *burrow.DeliveryEdge {
 	return &burrow.DeliveryEdge{
 		Src: dummyStop(int64(src)),
 		Dst: &burrow.HubNode{int64(dst)},
+		Wgt: 1.0,
 	}
 }
 
@@ -327,8 +330,11 @@ var _ = Describe("DeliveryNetwork functionality", func() {
 				It("Returns the weighted edge between two vertices", func() {
 					var e graph.WeightedEdge
 
+					validator := stopToStop(3,4)
+					validator.Wgt = 3.0
+
 					e = G.WeightedEdge(3, 4) // implicitly tests interface
-					Expect(e).To(matchers.MatchEdge(stopToStop(3, 4)))
+					Expect(e).To(matchers.MatchEdge(validator))
 					Expect(e.Weight()).To(BeEquivalentTo(3))
 				})
 

@@ -110,4 +110,23 @@ var _ = Describe("EdgeMatcher", func() {
 			Expect(matcher.FailureMessage(edgeActual1)).To(ContainSubstring("to have node ID and node type matches to"))
 		})
 	})
+
+	Context("When the edges have weights", func() {
+		It("Should match on equal weights and fail on different weights", func() {
+			src1 := &nodeStub1{Val: int64(2)}
+			dst1 := &nodeStub2{Val: int64(3)}
+			edge1 := &edgeStub2{Src: src1, Dst: dst1, Wgt: 1.0}
+
+			src2 := &nodeStub1{Val: int64(2)}
+			dst2 := &nodeStub2{Val: int64(3)}
+			edge2 := &edgeStub2{Src: src2, Dst: dst2, Wgt: 1.0}
+
+			src3 := &nodeStub1{Val: int64(2)}
+			dst3 := &nodeStub2{Val: int64(3)}
+			edge3 := &edgeStub2{Src: src3, Dst: dst3, Wgt: 2.0}
+
+			Expect(edge2).To(matchers.MatchEdge(edge1))
+			Expect(edge3).NotTo(matchers.MatchEdge(edge1))
+		})
+	})
 })
