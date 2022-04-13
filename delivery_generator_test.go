@@ -3,13 +3,12 @@ package burrow_test
 import (
 	"math/rand"
 	"time"
-	"container/heap"
+	"sort"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/bdshroyer/burrow"
-	"github.com/bdshroyer/burrow/matchers"
 )
 
 func testNewNodeFactory(counterSeed int64) *burrow.NodeFactory {
@@ -28,10 +27,10 @@ func testTimeDist(t0 time.Time, window time.Duration) burrow.SampleDistribution[
 const window time.Duration = 24 * time.Hour
 
 var _ = Describe("DeliveryGenerator", func() {
-	Describe("StopNodeHeap", func() {
+	Describe("StopNodeSortable", func() {
 
 		var (
-			rawHeap *burrow.StopNodeHeap
+			rawSortable *burrow.StopNodeSortable
 			Payload []*burrow.StopNode
 		)
 
@@ -42,86 +41,67 @@ var _ = Describe("DeliveryGenerator", func() {
 						&burrow.StopNode{Val: 3, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
 						&burrow.StopNode{Val: 4, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
 					}
-			rawHeap = new(burrow.StopNodeHeap)
-			rawHeap.Payload = Payload
+			rawSortable = new(burrow.StopNodeSortable)
+			rawSortable.Payload = Payload
 		})
 
 		Describe("Len", func() {
 			When("Called on a non-empty heap", func() {
 				It("Returns the length of the heap", func() {
-					Expect(rawHeap.Len()).To(Equal(4))
+					Expect(rawSortable.Len()).To(Equal(4))
 				})
 			})
 
 			When("Called on an empty heap", func() {
-				rawHeap := new(burrow.StopNodeHeap)
-				Expect(rawHeap.Len()).To(Equal(0))
+				rawSortable := new(burrow.StopNodeSortable)
+				Expect(rawSortable.Len()).To(Equal(0))
 			})
 		})
 
 		Describe("Less", func() {
 			It("Returns true if item i is less than item j", func() {
-				Expect(rawHeap.Less(0, 1)).To(BeFalse()) // t < u
-				Expect(rawHeap.Less(1, 2)).To(BeTrue())  // t > u
-				Expect(rawHeap.Less(2, 3)).To(BeFalse()) // t = u
+				Expect(rawSortable.Less(0, 1)).To(BeFalse()) // t < u
+				Expect(rawSortable.Less(1, 2)).To(BeTrue())  // t > u
+				Expect(rawSortable.Less(2, 3)).To(BeFalse()) // t = u
 			})
 		})
 
 		Describe("Swap", func() {
 			It("Swaps the elements' positions in the heap", func() {
-				rawHeap2 := &burrow.StopNodeHeap{ Payload: make([]*burrow.StopNode, rawHeap.Len()) }
-				copy(rawHeap2.Payload, rawHeap.Payload)
+				rawSortable2 := &burrow.StopNodeSortable{ Payload: make([]*burrow.StopNode, rawSortable.Len()) }
+				copy(rawSortable2.Payload, rawSortable.Payload)
 
-				rawHeap2.Swap(0, 3)
-				Expect(rawHeap2.Payload[0].Timestamp).To(BeTemporally("==", rawHeap.Payload[3].Timestamp))
-				Expect(rawHeap2.Payload[3].Timestamp).To(BeTemporally("==", rawHeap.Payload[0].Timestamp))
+				rawSortable2.Swap(0, 3)
+				Expect(rawSortable2.Payload[0].Timestamp).To(BeTemporally("==", rawSortable.Payload[3].Timestamp))
+				Expect(rawSortable2.Payload[3].Timestamp).To(BeTemporally("==", rawSortable.Payload[0].Timestamp))
 
-				rawHeap2.Swap(2, 2)
-				Expect(rawHeap2.Payload[2].Timestamp).To(BeTemporally("==", rawHeap.Payload[2].Timestamp))
+				rawSortable2.Swap(2, 2)
+				Expect(rawSortable2.Payload[2].Timestamp).To(BeTemporally("==", rawSortable.Payload[2].Timestamp))
 			})
 		})
 
-		Describe("Push", func() {
-			It("Appends a new node to the heap", func() {
-				originalLength := rawHeap.Len()
-				newNode := &burrow.StopNode{Val: 5, Timestamp: time.Date(2022, 3, 29, 21, 48, 54, 0, time.UTC)}
+		It("Produces an ordered list when passed to the sort.Sort() function", func() {
+			sort.Sort(rawSortable)
 
-				rawHeap.Push(newNode)
-				Expect(rawHeap.Len()).To(Equal(originalLength + 1))
-				Expect(rawHeap.Payload).To(ContainElement(matchers.MatchNode(newNode)))
-			})
+			for i := 1; i < rawSortable.Len(); i++ {
+				Expect(rawSortable.Payload[i].Timestamp).To(BeTemporally(">=", rawSortable.Payload[i-1].Timestamp))
+			}
 		})
+	})
 
-		Describe("Pop", func() {
-			It("Removes and returns the top item from the heap", func() {
-				originalLength := rawHeap.Len()
-				originalNode := rawHeap.Payload[0]
-				nextNode := rawHeap.Payload[1]
-
-				popNode := rawHeap.Pop()
-
-				Expect(rawHeap.Len()).To(Equal(originalLength - 1))
-				Expect(popNode).To(matchers.MatchNode(originalNode))
-				Expect(rawHeap.Payload[0]).To(matchers.MatchNode(nextNode))
-			})
-		})
-
-		It("Observes the min-heap property", func() {
-			testHeap := new(burrow.StopNodeHeap)
-			heap.Init(testHeap)
-
-			for i := 0; i < rawHeap.Len(); i++ {
-				testHeap.Push(rawHeap.Payload[i])
+	Describe("sortInPlace", func() {
+		It("Sorts the passed-in array of stop nodes", func() {
+			payload := []*burrow.StopNode{
+				&burrow.StopNode{Val: 1, Timestamp: time.Date(2022, 3, 29, 16, 11, 8, 0, time.UTC)},
+				&burrow.StopNode{Val: 2, Timestamp: time.Date(2022, 3, 29, 4, 32, 19, 0, time.UTC)},
+				&burrow.StopNode{Val: 3, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
+				&burrow.StopNode{Val: 4, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
 			}
 
-			Expect(testHeap.Len()).To(Equal(rawHeap.Len()))
-			prev := testHeap.Pop().(*burrow.StopNode)
+			burrow.SortInPlace(payload)
 
-			for i := 1; i < rawHeap.Len(); i++ {
-				current := testHeap.Pop().(*burrow.StopNode)
-
-				Expect(prev.Timestamp).To(BeTemporally("<=", current.Timestamp))
-				prev = current
+			for i := 1; i < len(payload); i++ {
+				Expect(payload[i].Timestamp).To(BeTemporally(">=", payload[i-1].Timestamp))
 			}
 		})
 	})

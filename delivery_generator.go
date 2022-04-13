@@ -3,7 +3,7 @@ package burrow
 import (
 	"fmt"
 	"time"
-	"container/heap"
+	"sort"
 )
 
 // Manages creation variables for delivery nodes.
@@ -32,39 +32,29 @@ func (nf *NodeFactory) MakeHub() *HubNode {
 	return output
 }
 
-// StopNodeHeap exists to implement the container/heap interface in Golang. Note that the specification includes very little in the way of error checking; users are kind of on the honor system not to do anything that might cause the heap code to panic.
-type StopNodeHeap struct {
+// StopNodeSortable exists to implement the container/heap interface in Golang. Note that the specification includes very little in the way of error checking; users are kind of on the honor system not to do anything that might cause the heap code to panic.
+type StopNodeSortable struct {
 	Payload []*StopNode
 }
 
 // Returns the length of the heap.
-func (s StopNodeHeap) Len() int {
+func (s StopNodeSortable) Len() int {
 	return len(s.Payload)
 }
 
-// Returns true if timestamp i is earlier than timestamp j. Imposes an earliest-node-first ordering on the heap.
-func (s StopNodeHeap) Less(i, j int) bool {
+// Returns true if timestamp j is earlier than timestamp i. Imposes an earliest-node-first ordering on the heap.
+func (s StopNodeSortable) Less(i, j int) bool {
 	return s.Payload[i].Timestamp.Before(s.Payload[j].Timestamp)
 }
 
 // Swaps two node positions in the heap.
-func (s StopNodeHeap) Swap(i, j int) {
+func (s StopNodeSortable) Swap(i, j int) {
 	s.Payload[i], s.Payload[j] = s.Payload[j], s.Payload[i]
 }
 
-// Pushes a new node onto the heap. Includes a call to Fix(), the container/heap equivalent of heapify.
-func (s *StopNodeHeap) Push(v any) {
-	(*s).Payload = append((*s).Payload, v.(*StopNode))
-	heap.Fix(s, (*s).Len() - 1)
-}
-
-// Removes the first node in the heap. According to the given implementation of Less(), this should be the node with the earliest timestamp. Includes a call to Fix(), the container/heap equivalent of heapify.
-func (s *StopNodeHeap) Pop() any {
-	payload := (*s).Payload[0]
-	(*s).Payload = (*s).Payload[1:]
-	heap.Fix(s, 0)
-
-	return payload
+func SortInPlace(elts []*StopNode) {
+	sns := &StopNodeSortable{Payload: elts}
+	sort.Sort(sns)
 }
 
 // Creates a delivery network with the specified number of hubs and stops  using the provided distribution.
@@ -90,12 +80,12 @@ func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[t
 		G.DEdges[newHub.ID()] = make([]*DeliveryEdge, 0, nStopNodes)
 	}
 
-	nodeHeap := &StopNodeHeap{Payload: make([]*StopNode, 0, nStopNodes)}
+	nodeList := make([]*StopNode, 0, nStopNodes)
 
 	// Generate new stop nodes and store them on a sorted min-heap.
 	for i := 0; uint(i) < nStopNodes; i++ {
 		newStop := nFactory.MakeStop(distro())
-		nodeHeap.Push(newStop)
+		nodeList = append(nodeList, newStop)
 
 		// Allocation hint based on the assumption that most nodes will have an edge leading back to each hub
 		G.DEdges[newStop.ID()] = make([]*DeliveryEdge, 0, nHubNodes + (nStopNodes - uint(i) + 1))
@@ -113,11 +103,13 @@ func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[t
 		}
 	}
 
+	SortInPlace(nodeList)
+
 	// Extract nodes in order from the heap, connect its predecessors to it, and store it in the graph.
 	// Since each node stored in the graph prior to the given node is an earlier stop (due to the min-heap property), a new edge should be drawn from each node in the graph to the new node.
 	// The exception to this rule is if two nodes share the exact same timestamp.
-	for nodeHeap.Len() > 0 {
-		nextStop := nodeHeap.Pop().(*StopNode)
+	for i := 0; i < len(nodeList); i++ {
+		nextStop := nodeList[i]
 
 		for _, prevStop := range G.Stops {
 			weight := float64(nextStop.Timestamp.Sub(prevStop.Timestamp))
