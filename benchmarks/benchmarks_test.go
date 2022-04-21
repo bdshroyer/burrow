@@ -37,7 +37,7 @@ var _ = Describe("Benchmark", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					stopwatch := experiment.NewStopwatch()
-					G, err := burrow.MakeDeliveryNetwork(1, 10000, distro)
+					G, err := burrow.MakeDeliveryNetwork(5, 10000, distro)
 					stopwatch.Record("Creation Time", gmeasure.Precision(time.Microsecond))
 
 					Expect(err).NotTo(HaveOccurred())
@@ -61,12 +61,17 @@ var _ = Describe("Benchmark", func() {
 
 					stopwatch.Reset()
 					for edges.Next() {
-						edges.WeightedEdge()
 					}
 					stopwatch.Record("Edge Iterating Time", gmeasure.Precision(time.Microsecond))
 
+					meanOutDegree := float64(0.0)
+					for _, edges := range G.DEdges {
+						meanOutDegree += float64(len(edges)) / nStops
+					}
+
 					experiment.RecordValue("nEdges", nEdges, gmeasure.Units("edges"))
 					experiment.RecordValue("edge density", nEdges/(2*nHubs*nStops+(nStops*(nStops-1))/2))
+					experiment.RecordValue("mean out degree", meanOutDegree)
 				},
 				gmeasure.SamplingConfig{N: 10},
 			)
