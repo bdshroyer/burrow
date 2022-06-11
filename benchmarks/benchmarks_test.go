@@ -36,8 +36,10 @@ var _ = Describe("Benchmark", func() {
 					distro, err := burrow.UniformTimestampDistribution(Today(), 24*time.Hour)
 					Expect(err).NotTo(HaveOccurred())
 
+					cfg := burrow.DeliveryNetworkConfig{HubNodes: 5, StopNodes: 10000, Distro: distro}
+
 					stopwatch := experiment.NewStopwatch()
-					G, err := burrow.MakeDeliveryNetwork(5, 10000, distro)
+					G, err := burrow.MakeDeliveryNetwork(cfg)
 					stopwatch.Record("Creation Time", gmeasure.Precision(time.Microsecond))
 
 					Expect(err).NotTo(HaveOccurred())

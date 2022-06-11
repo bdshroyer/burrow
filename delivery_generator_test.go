@@ -153,17 +153,24 @@ var _ = Describe("DeliveryGenerator", func() {
 	Context("MakeDeliveryNetwork", func() {
 		var (
 			today time.Time
+			cfg burrow.DeliveryNetworkConfig
 			err error
 		)
 
 		BeforeEach(func() {
 				today, err = time.Parse(time.RFC3339, "2022-03-25T00:00:00-04:00")
 				Expect(err).NotTo(HaveOccurred())
+
+				cfg = burrow.DeliveryNetworkConfig {
+					HubNodes: 2,
+					StopNodes: 3,
+					Distro: testTimeDist(today, window),
+				}
 		})
 
 		When("Given a distro and a non-zero number of stop and hub nodes", func() {
 			It("Creates a delivery network", func() {
-				G, err := burrow.MakeDeliveryNetwork(2, 3, testTimeDist(today, window))
+				G, err := burrow.MakeDeliveryNetwork(cfg)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(G).NotTo(BeNil())
 
@@ -178,7 +185,7 @@ var _ = Describe("DeliveryGenerator", func() {
 			})
 
 			It("Has stop-to-stop edges that all comply with the happens-before relation", func() {
-				G, err := burrow.MakeDeliveryNetwork(2, 3, testTimeDist(today, window))
+				G, err := burrow.MakeDeliveryNetwork(cfg)
 				Expect(err).NotTo(HaveOccurred())
 
 				edges := G.Edges().(*burrow.DeliveryEdges)
@@ -206,7 +213,9 @@ var _ = Describe("DeliveryGenerator", func() {
 
 		When("Invoked with a hub count of 0", func() {
 			It("Creates a stop-node DAG", func() {
-				dag, err := burrow.MakeDeliveryNetwork(0, 3, testTimeDist(today, window))
+				cfg.HubNodes = 0
+
+				dag, err := burrow.MakeDeliveryNetwork(cfg)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(dag.Hubs)).To(Equal(0))
 				Expect(len(dag.Stops)).To(Equal(3))
@@ -216,7 +225,9 @@ var _ = Describe("DeliveryGenerator", func() {
 
 		When("Passed an empty distribution", func() {
 			It("Returns an error", func() {
-				dag, err := burrow.MakeDeliveryNetwork(2, 3, nil)
+				cfg.Distro = nil
+
+				dag, err := burrow.MakeDeliveryNetwork(cfg)
 				Expect(err).To(MatchError("Must receive a non-null sample distribution."))
 				Expect(dag).To(BeNil())
 			})

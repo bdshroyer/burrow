@@ -57,9 +57,17 @@ func SortInPlace(elts []*StopNode) {
 	sort.Sort(sns)
 }
 
+type DeliveryNetworkConfig struct {
+	HubNodes uint
+	StopNodes uint
+	Distro SampleDistribution[time.Time]
+}
+
 // Creates a delivery network with the specified number of hubs and stops  using the provided distribution.
 // Returns an error if distro is not a valid sample distribution.
-func MakeDeliveryNetwork(nHubNodes, nStopNodes uint, distro SampleDistribution[time.Time]) (*DeliveryNetwork, error) {
+func MakeDeliveryNetwork(cfg DeliveryNetworkConfig) (*DeliveryNetwork, error) {
+	nHubNodes, nStopNodes, distro := cfg.HubNodes, cfg.StopNodes, cfg.Distro
+
 	if distro == nil {
 		return nil, fmt.Errorf("Must receive a non-null sample distribution.")
 	}
