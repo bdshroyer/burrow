@@ -1,17 +1,57 @@
 package burrow_test
 
 import (
+	"math"
 	"math/rand"
 	"time"
 
 	"github.com/bdshroyer/burrow"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"gonum.org/v1/gonum/stat"
+	"gonum.org/v1/gonum/stat/distuv"
 )
 
 func today() time.Time {
 	base := time.Now()
 	return time.Date(base.Year(), base.Month(), base.Day(), 0, 0, 0, 0, base.Location())
+}
+
+func rawStdDev(xs []float64) float64 {
+	var mu float64 = 0.0
+	var variance float64 = 0.0
+
+	N := float64(len(xs))
+
+	for _, x := range xs {
+		mu += x
+	}
+
+	mu /= N
+
+	for _, x := range xs {
+		variance += math.Pow(x-mu, 2)
+	}
+
+	variance /= N - 1
+	return math.Sqrt(variance)
+}
+
+func oneSampleTtest(samples []float64, popMu float64) float64 {
+	nSamples := len(samples)
+
+	sampleMu, sampleStdDev := stat.MeanStdDev(samples, nil)
+	sampleStdErr := sampleStdDev / math.Sqrt(float64(nSamples))
+
+	tDistro := distuv.StudentsT{
+		Mu:    popMu,
+		Sigma: sampleStdErr,
+		Nu:    float64(nSamples - 1),
+	}
+
+	pValue := 2 * tDistro.CDF(sampleMu)
+
+	return pValue
 }
 
 var _ = Describe("Distros", func() {
@@ -75,6 +115,46 @@ var _ = Describe("Distros", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(distro).To(BeNil())
 
+			})
+		})
+	})
+
+	Context("GaussianTimestampDistribution", func() {
+		var (
+			nSamples int = 100
+		)
+		When("Given a valid time tMu and a standard deviation tSigma", func() {
+			It("Returns a gaussian distro function of distribution type N(tMu, tSigma)", func() {
+				t0 := today()
+				tMu := t0.Add(11 * time.Hour)
+				tSigma := 2 * time.Hour
+
+				distro, err := burrow.GaussianTimestampDistribution(tMu, tSigma)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(distro).NotTo(BeNil())
+
+				By("Failing to reject the null hypothesis")
+
+				samples := make([]float64, 0, nSamples)
+				for i := 0; i < nSamples; i++ {
+					samples = append(samples, float64(distro().UnixMilli()))
+				}
+
+				pValue := oneSampleTtest(samples, float64(tMu.UnixMilli()))
+
+				Expect(pValue).To(And(BeNumerically(">=", 0.05), BeNumerically("<=", 1.0)))
+			})
+		})
+
+		When("Given a negative standard deviation", func() {
+			It("Errors out with a message", func() {
+				t0 := today()
+				tMu := t0.Add(11 * time.Hour)
+				tSigma := 2 * time.Hour
+
+				distro, err := burrow.GaussianTimestampDistribution(tMu, -tSigma)
+				Expect(err).To(MatchError("Standard deviation should not be negative"))
+				Expect(distro).To(BeNil())
 			})
 		})
 	})

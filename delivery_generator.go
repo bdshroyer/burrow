@@ -58,8 +58,7 @@ func SortInPlace(elts []*StopNode) {
 }
 
 type DeliveryNetworkConfig struct {
-	HubNodes uint
-	StopNodes uint
+	HubNodes, StopNodes uint
 	Distro SampleDistribution[time.Time]
 }
 
