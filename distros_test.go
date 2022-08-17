@@ -121,7 +121,7 @@ var _ = Describe("Distros", func() {
 
 	Context("GaussianTimestampDistribution", func() {
 		var (
-			nSamples int = 100
+			nSamples int = 10000
 		)
 		When("Given a valid time tMu and a standard deviation tSigma", func() {
 			It("Returns a gaussian distro function of distribution type N(tMu, tSigma)", func() {
@@ -142,7 +142,24 @@ var _ = Describe("Distros", func() {
 
 				pValue := oneSampleTtest(samples, float64(tMu.UnixMilli()))
 
+				/*
+				** This is not a good way to check for normality, and is something of an
+				** abuse of the t-test. Ideally you want something like Shapiro-Wilk or
+				** Anderson-Darling to test normality here, but Gonum doesn't implement
+				** those and it's **extremely** hard to find a way to calculate them that
+				** doesn't rely on a lookup table.
+				 */
 				Expect(pValue).To(And(BeNumerically(">=", 0.05), BeNumerically("<=", 1.0)))
+
+				By("Having summary statistics close to the target distribution")
+
+				testNorm := &distuv.Normal{}
+				testNorm.Fit(samples, nil)
+
+				mu := float64(tMu.UnixMilli())
+				sigma := float64(tSigma.Milliseconds())
+				Expect(math.Abs(mu-testNorm.Mu) / mu).To(BeNumerically("<=", 0.01))
+				Expect(math.Abs(sigma-testNorm.Sigma) / sigma).To(BeNumerically("<=", 0.01))
 			})
 		})
 
