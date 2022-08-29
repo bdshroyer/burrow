@@ -6,52 +6,15 @@ import (
 	"time"
 
 	"github.com/bdshroyer/burrow"
+	"github.com/bdshroyer/burrow/testutils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"gonum.org/v1/gonum/stat"
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
 func today() time.Time {
 	base := time.Now()
 	return time.Date(base.Year(), base.Month(), base.Day(), 0, 0, 0, 0, base.Location())
-}
-
-func rawStdDev(xs []float64) float64 {
-	var mu float64 = 0.0
-	var variance float64 = 0.0
-
-	N := float64(len(xs))
-
-	for _, x := range xs {
-		mu += x
-	}
-
-	mu /= N
-
-	for _, x := range xs {
-		variance += math.Pow(x-mu, 2)
-	}
-
-	variance /= N - 1
-	return math.Sqrt(variance)
-}
-
-func oneSampleTtest(samples []float64, popMu float64) float64 {
-	nSamples := len(samples)
-
-	sampleMu, sampleStdDev := stat.MeanStdDev(samples, nil)
-	sampleStdErr := sampleStdDev / math.Sqrt(float64(nSamples))
-
-	tDistro := distuv.StudentsT{
-		Mu:    popMu,
-		Sigma: sampleStdErr,
-		Nu:    float64(nSamples - 1),
-	}
-
-	pValue := 2 * tDistro.CDF(sampleMu)
-
-	return pValue
 }
 
 var _ = Describe("Distros", func() {
@@ -140,17 +103,10 @@ var _ = Describe("Distros", func() {
 					samples = append(samples, float64(distro().UnixMilli()))
 				}
 
-				pValue := oneSampleTtest(samples, float64(tMu.UnixMilli()))
+				pValue, err := testutils.AndersonDarlingTest(samples)
+				Expect(err).NotTo(HaveOccurred())
 
-				/*
-				** This is not a good way to check for normality, and is something of an
-				** abuse of the t-test. Ideally you want something like Shapiro-Wilk or
-				** Anderson-Darling to test normality here, but Gonum doesn't implement
-				** those and it's **extremely** hard to find a way to calculate them that
-				** doesn't rely on a lookup table.
-				 */
 				Expect(pValue).To(And(BeNumerically(">=", 0.05), BeNumerically("<=", 1.0)))
-
 				By("Having summary statistics close to the target distribution")
 
 				testNorm := &distuv.Normal{}
