@@ -10,6 +10,11 @@ import (
 	"github.com/bdshroyer/burrow/testutils"
 )
 
+// From Section 3 of Marsaglia & Marsaglia '04.
+func testLeftCrossing(N float64) float64 {
+	return 0.01265 + 0.1757/N
+}
+
 var _ = Describe("AndersonDarling", func() {
 	// Values sourced from Marsaglia and Marsaglia, indicating the 90%, 95%, and 99%
 	// confidence thresholds for the Anderson-Darling a-statistic.
@@ -199,6 +204,70 @@ var _ = Describe("AndersonDarling", func() {
 
 					Expect(pValue).To(BeNumerically("~", 1.0, 1e-6))
 				})
+			})
+		})
+	})
+
+	Describe("ADSErrFix", func() {
+		var Ntest []float64 = []float64{8.0, 16.0, 32.0, 64.0}
+
+		// Marsaglia & Marsaglia's errfix approximation was calculated based on simulations
+		// that showed two x-intercepts for the error curve of A for any given N. This set
+		// of tests checks against that result. The target accuracy of 5e-5 is given by [1].
+		When("Tested against the x-intercepts of the error curves", func() {
+			It("Returns zero for a p-value of 0", func() {
+				for i := 0; i < len(Ntest); i++ {
+					fix, err := testutils.ADErrFix(Ntest[i], 0.0)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fix).To(BeNumerically("~", 0.0, 5e-5))
+				}
+			})
+
+			It("Returns zero for the first x-intercept", func() {
+				for i := 0; i < len(Ntest); i++ {
+					xIntercept := testLeftCrossing(Ntest[i])
+					fix, err := testutils.ADErrFix(Ntest[i], xIntercept)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fix).To(BeNumerically("~", 0.0, 5e-5))
+				}
+			})
+
+			It("Returns zero for the second x-intercept", func() {
+				for i := 0; i < len(Ntest); i++ {
+					fix, err := testutils.ADErrFix(Ntest[i], 0.8)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fix).To(BeNumerically("~", 0.0, 5e-5))
+				}
+			})
+		})
+
+		// As N approaches infinity, the AD distribution should converge to its infinite version,
+		// and the error correction term should vanish.
+		When("An infinite sample", func() {
+			It("Returns zero", func() {
+				fix, err := testutils.ADErrFix(math.Inf(1), 0.8)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fix).To(BeZero())
+			})
+		})
+
+		When("Passed bad inputs", func() {
+			It("Returns an error", func() {
+				for i := 0; i < len(Ntest); i++ {
+					fix, err := testutils.ADErrFix(Ntest[i], -1.0)
+					Expect(fix).To(BeZero())
+					Expect(err).To(MatchError("Probability must be between 0 and 1."))
+
+					fix, err = testutils.ADErrFix(Ntest[i], 3.0)
+					Expect(fix).To(BeZero())
+					Expect(err).To(MatchError("Probability must be between 0 and 1."))
+
+					fix, err = testutils.ADErrFix(0.0, 0.5)
+					Expect(fix).To(BeZero())
+					Expect(err).To(MatchError("N must be greater than 0."))
+				}
 			})
 		})
 	})

@@ -25,7 +25,17 @@ func AndersonDarlingTest(samples []float64) (float64, error) {
 	}
 
 	N := float64(len(samples))
-	return ADPValue(aStat * (1.0 + 4.0/N - 25/(N*N)))
+	pValue, err := ADPValue(aStat * (1.0 + 4.0/N - 25/(N*N)))
+	if err != nil {
+		return -1.0, err
+	}
+
+	fix, err := ADErrFix(float64(len(samples)), pValue)
+	if err != nil {
+		return -1.0, err
+	}
+
+	return pValue + fix, nil
 }
 
 // ADStatistic computes the a-statistic of the given sample. Currently only
@@ -117,4 +127,71 @@ func adsProbabilityHigh(z float64) float64 {
 	polynomial = adIntercept - polynomial*z
 
 	return math.Exp(-math.Exp(polynomial))
+}
+
+// ADErrFix provides a correction term that de-resolves an infinite AD distribution
+// (or at least the approximation we use) down to a resolution of N. Takes a sample
+// size N and an AD p-value p as inputs.
+//
+// Returns 0 if N <= 0, or if p is not a value between 0 and 1.
+func ADErrFix(N, p float64) (float64, error) {
+	if p < 0.0 || p > 1.0 {
+		return 0.0, fmt.Errorf("Probability must be between 0 and 1.")
+	}
+
+	if N <= 0 {
+		return 0.0, fmt.Errorf("N must be greater than 0.")
+	}
+
+	N2 := N * N
+	N3 := N2 * N
+	cN := leftCrossing(N)
+
+	if p < cN {
+		return (0.0037/N3 + 0.00078/N2 + 0.00006/N) * g1(p/cN), nil
+	}
+
+	if p < 0.8 {
+		return (0.04213/N + 0.01365/N2) * g2(p-cN) / (0.8 - cN), nil
+	}
+
+	return g3(p) / N, nil
+}
+
+/****** ErrFix support functions ******/
+
+// Sourced from Section 3 of Marsaglia & Marsaglia [1]. This gives the first
+// (non-zero) intercept of the error function.
+func leftCrossing(N float64) float64 {
+	return 0.01265 + 0.1757/N
+}
+
+func g1(p float64) float64 {
+	return math.Sqrt(p) * (1 - p) * (49*p - 102)
+}
+
+func g2(p float64) float64 {
+	gSeed := 1.91864
+	gPolynomial := []float64{8.259, 14.458, 14.6538, 6.54034}
+	gIntercept := -0.00022633
+
+	polynomial := gSeed
+	for i := 0; i < len(gPolynomial); i++ {
+		polynomial = gPolynomial[i] - polynomial*p
+	}
+
+	return gIntercept + polynomial*p
+}
+
+func g3(p float64) float64 {
+	gSeed := 255.7844
+	gPolynomial := []float64{1116.360, 1950.646, 1705.091, 745.2337}
+	gIntercept := -130.2137
+
+	polynomial := gSeed
+	for i := 0; i < len(gPolynomial); i++ {
+		polynomial = gPolynomial[i] - polynomial*p
+	}
+
+	return gIntercept + polynomial*p
 }
