@@ -1,18 +1,17 @@
-package burrow_test
+package network_test
 
 import (
 	"time"
 
+	"github.com/bdshroyer/burrow/network"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/bdshroyer/burrow"
 )
 
 const timeFormat string = "2000-01-01 00:00:00"
 
-func dummyStop(id int64) *burrow.StopNode {
-	return &burrow.StopNode{
+func dummyStop(id int64) *network.StopNode {
+	return &network.StopNode{
 		Val:       id,
 		Timestamp: time.Now(),
 	}
@@ -21,12 +20,12 @@ func dummyStop(id int64) *burrow.StopNode {
 var _ = Describe("Node", func() {
 	Context("HubNode", func() {
 		It("Implements Node interface", func() {
-			hub := &burrow.HubNode{4}
+			hub := &network.HubNode{4}
 			Expect(hub.ID()).To(BeEquivalentTo(4))
 		})
 
 		It("Identifies as a hub node", func() {
-			hub := &burrow.HubNode{4}
+			hub := &network.HubNode{4}
 			Expect(hub.IsHub()).To(BeTrue())
 		})
 	})

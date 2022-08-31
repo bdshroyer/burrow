@@ -1,18 +1,17 @@
-package burrow_test
+package network_test
 
 import (
+	"github.com/bdshroyer/burrow/network"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/bdshroyer/burrow"
 )
 
-func testNewDeliveryNodes() *burrow.DeliveryNodes {
-	return &burrow.DeliveryNodes{
-		Payload: []burrow.DeliveryNode{
-			&burrow.HubNode{Val: 1},
-			&burrow.StopNode{Val: 4},
-			&burrow.StopNode{Val: 3},
+func testNewDeliveryNodes() *network.DeliveryNodes {
+	return &network.DeliveryNodes{
+		Payload: []network.DeliveryNode{
+			&network.HubNode{Val: 1},
+			&network.StopNode{Val: 4},
+			&network.StopNode{Val: 3},
 		},
 		CurrentIdx: -1,
 	}
@@ -20,12 +19,12 @@ func testNewDeliveryNodes() *burrow.DeliveryNodes {
 }
 
 var _ = Describe("DeliveryNodes", func() {
-	var nodes *burrow.DeliveryNodes
+	var nodes *network.DeliveryNodes
 
 	Context("NewDeliveryNodes", func() {
 		It("Returns a new DeliveryNodes structure", func() {
-			Expect(burrow.NewDeliveryNodes()).NotTo(BeNil())
-			Expect(burrow.NewDeliveryNodes().Len()).To(BeZero())
+			Expect(network.NewDeliveryNodes()).NotTo(BeNil())
+			Expect(network.NewDeliveryNodes().Len()).To(BeZero())
 		})
 	})
 
@@ -41,7 +40,7 @@ var _ = Describe("DeliveryNodes", func() {
 			})
 
 			It("Returns nil if the collection is empty", func() {
-				nodes := new(burrow.DeliveryNodes)
+				nodes := new(network.DeliveryNodes)
 				nodes.Next()
 				Expect(nodes.Node()).To(BeNil())
 			})
@@ -66,7 +65,7 @@ var _ = Describe("DeliveryNodes", func() {
 			})
 
 			It("Returns nil if the collection is empty", func() {
-				nodes := new(burrow.DeliveryNodes)
+				nodes := new(network.DeliveryNodes)
 				nodes.Next()
 				Expect(nodes.Current()).To(BeNil())
 			})
@@ -108,7 +107,7 @@ var _ = Describe("DeliveryNodes", func() {
 			})
 
 			It("Returns nil on an empty collection", func() {
-				nodes := new(burrow.DeliveryNodes)
+				nodes := new(network.DeliveryNodes)
 				Expect(nodes.Len()).To(Equal(0))
 			})
 
@@ -144,7 +143,7 @@ var _ = Describe("DeliveryNodes", func() {
 			})
 
 			It("Simply returns false on an empty collection", func() {
-				nodes := new(burrow.DeliveryNodes)
+				nodes := new(network.DeliveryNodes)
 				Expect(nodes.Next()).To(BeEquivalentTo(false))
 			})
 		})

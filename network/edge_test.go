@@ -1,10 +1,9 @@
-package burrow_test
+package network_test
 
 import (
+	"github.com/bdshroyer/burrow/network"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/bdshroyer/burrow"
 )
 
 type TestNode struct {
@@ -22,7 +21,7 @@ func (n *TestNode) IsHub() bool {
 var _ = Describe("DeliveryEdge", func() {
 	Describe("Edge", func() {
 		It("Implements the Edge interface", func() {
-			e := &burrow.DeliveryEdge{
+			e := &network.DeliveryEdge{
 				Src: &TestNode{Val: 1},
 				Dst: &TestNode{Val: 2},
 			}
@@ -41,7 +40,7 @@ var _ = Describe("DeliveryEdge", func() {
 
 	Describe("Weight", func() {
 		It("Returns the assigned edge weight", func() {
-			e := burrow.DeliveryEdge{
+			e := network.DeliveryEdge{
 				Src: &TestNode{Val: int64(1)},
 				Dst: &TestNode{Val: int64(2)},
 				Wgt: 3.0,

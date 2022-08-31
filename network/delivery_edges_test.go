@@ -1,26 +1,26 @@
-package burrow_test
+package network_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/bdshroyer/burrow"
 	"github.com/bdshroyer/burrow/matchers"
+	"github.com/bdshroyer/burrow/network"
 )
 
 var _ = Describe("DeliveryEdges", func() {
-	testEdges := func() *burrow.DeliveryEdges {
-		nodes := make(map[int64]*burrow.StopNode)
+	testEdges := func() *network.DeliveryEdges {
+		nodes := make(map[int64]*network.StopNode)
 		for val := 1; val < 6; val++ {
-			nodes[int64(val)] = &burrow.StopNode{Val: int64(val)}
+			nodes[int64(val)] = &network.StopNode{Val: int64(val)}
 		}
 
-		edges := &burrow.DeliveryEdges{
-			Payload: []*burrow.DeliveryEdge{
-				&burrow.DeliveryEdge{Src: nodes[1], Dst: nodes[2], Wgt: 1.0},
-				&burrow.DeliveryEdge{Src: nodes[1], Dst: nodes[3], Wgt: 1.4},
-				&burrow.DeliveryEdge{Src: nodes[2], Dst: nodes[4], Wgt: 0.4},
-				&burrow.DeliveryEdge{Src: nodes[4], Dst: nodes[5], Wgt: 2.7},
+		edges := &network.DeliveryEdges{
+			Payload: []*network.DeliveryEdge{
+				&network.DeliveryEdge{Src: nodes[1], Dst: nodes[2], Wgt: 1.0},
+				&network.DeliveryEdge{Src: nodes[1], Dst: nodes[3], Wgt: 1.4},
+				&network.DeliveryEdge{Src: nodes[2], Dst: nodes[4], Wgt: 0.4},
+				&network.DeliveryEdge{Src: nodes[4], Dst: nodes[5], Wgt: 2.7},
 			},
 			CurrentIdx: -1,
 		}
@@ -30,8 +30,8 @@ var _ = Describe("DeliveryEdges", func() {
 
 	Describe("NewDeliveryEdges", func() {
 		It("Returns a fresh delivery edges iterator", func() {
-			Expect(burrow.NewDeliveryEdges()).NotTo(BeNil())
-			Expect(burrow.NewDeliveryEdges().Len()).To(Equal(0))
+			Expect(network.NewDeliveryEdges()).NotTo(BeNil())
+			Expect(network.NewDeliveryEdges().Len()).To(Equal(0))
 		})
 	})
 
@@ -55,7 +55,7 @@ var _ = Describe("DeliveryEdges", func() {
 
 		When("Iterator is empty", func() {
 			It("Returns a nil", func() {
-				edges := &burrow.DeliveryEdges{Payload: []*burrow.DeliveryEdge{}}
+				edges := &network.DeliveryEdges{Payload: []*network.DeliveryEdge{}}
 				Expect(edges.Edge()).To(BeNil())
 			})
 		})
@@ -82,7 +82,7 @@ var _ = Describe("DeliveryEdges", func() {
 
 		When("Iterator is empty", func() {
 			It("Returns a nil", func() {
-				edges := &burrow.DeliveryEdges{Payload: []*burrow.DeliveryEdge{}}
+				edges := &network.DeliveryEdges{Payload: []*network.DeliveryEdge{}}
 				Expect(edges.WeightedEdge()).To(BeNil())
 			})
 		})
@@ -109,7 +109,7 @@ var _ = Describe("DeliveryEdges", func() {
 
 		When("Iterator is empty", func() {
 			It("Returns a nil", func() {
-				edges := &burrow.DeliveryEdges{Payload: []*burrow.DeliveryEdge{}}
+				edges := &network.DeliveryEdges{Payload: []*network.DeliveryEdge{}}
 				Expect(edges.Current()).To(BeNil())
 			})
 		})
@@ -155,7 +155,7 @@ var _ = Describe("DeliveryEdges", func() {
 
 		When("Iterator is empty", func() {
 			It("Returns false and the iterator itself returns nil", func() {
-				edges := &burrow.DeliveryEdges{Payload: []*burrow.DeliveryEdge{}}
+				edges := &network.DeliveryEdges{Payload: []*network.DeliveryEdge{}}
 				Expect(edges.Next()).To(BeFalse())
 				Expect(edges.WeightedEdge()).To(BeNil())
 			})
@@ -197,7 +197,7 @@ var _ = Describe("DeliveryEdges", func() {
 
 		When("Iterator is empty", func() {
 			It("Returns a 0 in perpetuity", func() {
-				edges := &burrow.DeliveryEdges{Payload: []*burrow.DeliveryEdge{}}
+				edges := &network.DeliveryEdges{Payload: []*network.DeliveryEdge{}}
 
 				Expect(edges.Len()).To(Equal(0))
 

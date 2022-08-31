@@ -13,7 +13,7 @@ All node, edge and graph structures in burrow implement the corresponding interf
 	* DeliveryEdges -> gonum/graph.{Edges, WeightedEdges}
 	* DeliveryNetwork -> gonum/graph.{Graph, Directed, Weighted}
 */
-package burrow
+package network
 
 import (
 	"gonum.org/v1/gonum/graph"

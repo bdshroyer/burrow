@@ -1,4 +1,4 @@
-package burrow
+package network
 
 import "gonum.org/v1/gonum/graph"
 

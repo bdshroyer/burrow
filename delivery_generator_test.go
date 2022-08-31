@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/bdshroyer/burrow"
+	"github.com/bdshroyer/burrow/network"
 )
 
 func testNewNodeFactory(counterSeed int64) *burrow.NodeFactory {
@@ -31,15 +32,15 @@ var _ = Describe("DeliveryGenerator", func() {
 
 		var (
 			rawSortable *burrow.StopNodeSortable
-			Payload []*burrow.StopNode
+			Payload []*network.StopNode
 		)
 
 		BeforeEach(func() {
-			Payload = []*burrow.StopNode{
-						&burrow.StopNode{Val: 1, Timestamp: time.Date(2022, 3, 29, 16, 11, 8, 0, time.UTC)},
-						&burrow.StopNode{Val: 2, Timestamp: time.Date(2022, 3, 29, 4, 32, 19, 0, time.UTC)},
-						&burrow.StopNode{Val: 3, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
-						&burrow.StopNode{Val: 4, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
+			Payload = []*network.StopNode{
+						&network.StopNode{Val: 1, Timestamp: time.Date(2022, 3, 29, 16, 11, 8, 0, time.UTC)},
+						&network.StopNode{Val: 2, Timestamp: time.Date(2022, 3, 29, 4, 32, 19, 0, time.UTC)},
+						&network.StopNode{Val: 3, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
+						&network.StopNode{Val: 4, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
 					}
 			rawSortable = new(burrow.StopNodeSortable)
 			rawSortable.Payload = Payload
@@ -68,7 +69,7 @@ var _ = Describe("DeliveryGenerator", func() {
 
 		Describe("Swap", func() {
 			It("Swaps the elements' positions in the heap", func() {
-				rawSortable2 := &burrow.StopNodeSortable{ Payload: make([]*burrow.StopNode, rawSortable.Len()) }
+				rawSortable2 := &burrow.StopNodeSortable{ Payload: make([]*network.StopNode, rawSortable.Len()) }
 				copy(rawSortable2.Payload, rawSortable.Payload)
 
 				rawSortable2.Swap(0, 3)
@@ -91,11 +92,11 @@ var _ = Describe("DeliveryGenerator", func() {
 
 	Describe("sortInPlace", func() {
 		It("Sorts the passed-in array of stop nodes", func() {
-			payload := []*burrow.StopNode{
-				&burrow.StopNode{Val: 1, Timestamp: time.Date(2022, 3, 29, 16, 11, 8, 0, time.UTC)},
-				&burrow.StopNode{Val: 2, Timestamp: time.Date(2022, 3, 29, 4, 32, 19, 0, time.UTC)},
-				&burrow.StopNode{Val: 3, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
-				&burrow.StopNode{Val: 4, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
+			payload := []*network.StopNode{
+				&network.StopNode{Val: 1, Timestamp: time.Date(2022, 3, 29, 16, 11, 8, 0, time.UTC)},
+				&network.StopNode{Val: 2, Timestamp: time.Date(2022, 3, 29, 4, 32, 19, 0, time.UTC)},
+				&network.StopNode{Val: 3, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
+				&network.StopNode{Val: 4, Timestamp: time.Date(2022, 3, 29, 5, 51, 26, 0, time.UTC)},
 			}
 
 			burrow.SortInPlace(payload)
@@ -188,21 +189,21 @@ var _ = Describe("DeliveryGenerator", func() {
 				G, err := burrow.MakeDeliveryNetwork(cfg)
 				Expect(err).NotTo(HaveOccurred())
 
-				edges := G.Edges().(*burrow.DeliveryEdges)
+				edges := G.Edges().(*network.DeliveryEdges)
 				stopEdgeCount := 0
 
 				// Each edge must have the property that the source is earlier than the destination.
 				for edges.Next() {
-					from := edges.Current().From().(burrow.DeliveryNode)
-					to := edges.Current().To().(burrow.DeliveryNode)
+					from := edges.Current().From().(network.DeliveryNode)
+					to := edges.Current().To().(network.DeliveryNode)
 
 					if from.IsHub() || to.IsHub() {
 						continue
 					}
 
 					stopEdgeCount++
-					fromStop := from.(*burrow.StopNode)
-					toStop := to.(*burrow.StopNode)
+					fromStop := from.(*network.StopNode)
+					toStop := to.(*network.StopNode)
 					Expect(fromStop.Timestamp).To(BeTemporally("<", toStop.Timestamp))
 				}
 
