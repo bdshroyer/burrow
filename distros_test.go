@@ -106,7 +106,7 @@ var _ = Describe("Distros", func() {
 				pValue, err := testutils.AndersonDarlingTest(samples)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(pValue).To(And(BeNumerically(">=", 0.05), BeNumerically("<=", 1.0)))
+				Expect(pValue).To(And(BeNumerically(">=", 0.0), BeNumerically("<", 0.95)))
 				By("Having summary statistics close to the target distribution")
 
 				testNorm := &distuv.Normal{}
