@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/onsi/ginkgo/v2 v2.4.0
-	github.com/onsi/gomega v1.23.0
-	golang.org/x/exp v0.0.0-20221026153819-32f3d567a233
+	github.com/onsi/gomega v1.24.0
+	golang.org/x/exp v0.0.0-20221031165847-c99f073a8326
 	gonum.org/v1/gonum v0.12.0
 )
 
