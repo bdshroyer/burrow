@@ -20,10 +20,12 @@ func (e *DeliveryEdge) To() graph.Node {
 }
 
 // ReversedEdge() returns a DeliveryEdge struct with the same source and destination as the receiver, but reversed.
+// In this implementation, a reversed edge has the same weight as the original edge. This reflects the idea that the weights represent travel duration.
 func (e *DeliveryEdge) ReversedEdge() graph.Edge {
 	return &DeliveryEdge{
 		Src: e.Dst,
 		Dst: e.Src,
+		Wgt: e.Wgt,
 	}
 }
 

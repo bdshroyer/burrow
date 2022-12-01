@@ -212,6 +212,45 @@ var _ = Describe("DeliveryGenerator", func() {
 			})
 		})
 
+		When("Given a distro and positive lower and upper bounds", func() {
+			It("Does not return any edges whose size is outside of the bounds", func() {
+				cfg.EdgeBounds = &burrow.TimeBox{30 * time.Minute, 2 * time.Hour}
+
+				G, err := burrow.MakeDeliveryNetwork(cfg)
+				Expect(err).NotTo(HaveOccurred())
+
+				edges := G.Edges().(*network.DeliveryEdges)
+
+				for edges.Next() {
+					current := edges.Current()
+
+					Expect(current.Weight()).To(BeNumerically(">=", float64(cfg.EdgeBounds[0])))
+					Expect(current.Weight()).To(BeNumerically("<=", float64(cfg.EdgeBounds[1])))
+				}
+			})
+		})
+
+		When("Given faulty edge limits", func() {
+			It("Returns an error if the lower bound exceeds the upper bound", func() {
+				cfg.EdgeBounds = &burrow.TimeBox{3 * time.Hour, 2 * time.Hour}
+				G, err := burrow.MakeDeliveryNetwork(cfg)
+				Expect(G).To(BeNil())
+				Expect(err).To(MatchError("Lower edge bound must not exceed upper edge bound."))
+			})
+
+			It("Returns an error if either bound is less than zero", func() {
+				cfg.EdgeBounds = &burrow.TimeBox{-1 * time.Hour, 2 * time.Hour}
+				G, err := burrow.MakeDeliveryNetwork(cfg)
+				Expect(G).To(BeNil())
+				Expect(err).To(MatchError("Edge bounds cannot be negative."))
+
+				cfg.EdgeBounds = &burrow.TimeBox{-3 * time.Hour, -3 * time.Hour}
+				G, err = burrow.MakeDeliveryNetwork(cfg)
+				Expect(G).To(BeNil())
+				Expect(err).To(MatchError("Edge bounds cannot be negative."))
+			})
+		})
+
 		When("Invoked with a hub count of 0", func() {
 			It("Creates a stop-node DAG", func() {
 				cfg.HubNodes = 0

@@ -59,18 +59,31 @@ func SortInPlace(elts []*network.StopNode) {
 	sort.Sort(sns)
 }
 
+type TimeBox [2]time.Duration
+
+func (t TimeBox) inBounds(weight float64) bool {
+	return weight >= float64(t[0]) && weight <= float64(t[1])
+}
+
 type DeliveryNetworkConfig struct {
 	HubNodes, StopNodes uint
 	Distro SampleDistribution[time.Time]
+	EdgeBounds *TimeBox
 }
 
 // Creates a delivery network with the specified number of hubs and stops  using the provided distribution.
 // Returns an error if distro is not a valid sample distribution.
 func MakeDeliveryNetwork(cfg DeliveryNetworkConfig) (*network.DeliveryNetwork, error) {
-	nHubNodes, nStopNodes, distro := cfg.HubNodes, cfg.StopNodes, cfg.Distro
+	nHubNodes, nStopNodes, distro, edgeBounds := cfg.HubNodes, cfg.StopNodes, cfg.Distro, cfg.EdgeBounds
 
 	if distro == nil {
 		return nil, fmt.Errorf("Must receive a non-null sample distribution.")
+	}
+
+	if edgeBounds != nil && edgeBounds[0] > edgeBounds[1] {
+		return nil, fmt.Errorf("Lower edge bound must not exceed upper edge bound.")
+	} else if edgeBounds != nil && (edgeBounds[0] < 0 || edgeBounds[1] < 0) {
+		return nil, fmt.Errorf("Edge bounds cannot be negative.")
 	}
 
 	G := &network.DeliveryNetwork{
@@ -124,13 +137,15 @@ func MakeDeliveryNetwork(cfg DeliveryNetworkConfig) (*network.DeliveryNetwork, e
 			weight := float64(nextStop.Timestamp.Sub(prevStop.Timestamp))
 
 			if weight > 0.0 {
-				edge := &network.DeliveryEdge{
-					Src: prevStop,
-					Dst: nextStop,
-					Wgt: weight,
-				}
+				if cfg.EdgeBounds == nil || cfg.EdgeBounds.inBounds(weight) {
+					edge := &network.DeliveryEdge{
+						Src: prevStop,
+						Dst: nextStop,
+						Wgt: weight,
+					}
 
-				G.DEdges[prevStop.ID()] = append(G.DEdges[prevStop.ID()], edge)
+					G.DEdges[prevStop.ID()] = append(G.DEdges[prevStop.ID()], edge)
+				}
 			}
 		}
 
