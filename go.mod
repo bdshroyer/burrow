@@ -3,9 +3,9 @@ module github.com/bdshroyer/burrow
 go 1.19
 
 require (
-	github.com/onsi/ginkgo/v2 v2.5.0
+	github.com/onsi/ginkgo/v2 v2.5.1
 	github.com/onsi/gomega v1.24.1
-	golang.org/x/exp v0.0.0-20221114191408-850992195362
+	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
 	gonum.org/v1/gonum v0.12.0
 )
 
