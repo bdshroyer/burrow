@@ -22,9 +22,9 @@ var _ = Describe("DeliveryEdge", func() {
 	Describe("Edge", func() {
 		It("Implements the Edge interface", func() {
 			e := &network.DeliveryEdge{
-				Src:    &TestNode{Val: 1},
-				Dst:    &TestNode{Val: 2},
-				Weight: 3.0,
+				Src: &TestNode{Val: 1},
+				Dst: &TestNode{Val: 2},
+				Wgt: 3.0,
 			}
 
 			// From() and To() should return pointers to objects
@@ -32,11 +32,11 @@ var _ = Describe("DeliveryEdge", func() {
 			Expect(e.From().ID()).To(BeEquivalentTo(1))
 			Expect(e.To().ID()).To(BeEquivalentTo(2))
 
-			ePrime := e.ReversedEdge()
+			ePrime := e.ReversedEdge().(*network.DeliveryEdge)
 
 			Expect(ePrime.From().ID()).To(BeEquivalentTo(2))
 			Expect(ePrime.To().ID()).To(BeEquivalentTo(1))
-			Expect(ePrime.Wgt().ID()).To(BeEquivalentTo(3))
+			Expect(ePrime.Weight()).To(BeEquivalentTo(3))
 		})
 	})
 
