@@ -12,11 +12,6 @@ import (
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
-func today() time.Time {
-	base := time.Now()
-	return time.Date(base.Year(), base.Month(), base.Day(), 0, 0, 0, 0, base.Location())
-}
-
 var _ = Describe("Distros", func() {
 	BeforeEach(func() {
 		rand.Seed(3)

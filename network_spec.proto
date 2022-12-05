@@ -1,0 +1,30 @@
+syntax = "proto3";
+package tutorial;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/bdshroyer/burrow";
+
+
+message NetworkSpec {
+    uint32 Hubs = 1;
+    uint32 Stops = 2;
+
+    message UniformDistro {}
+    message GaussianDistro {
+        int64 Mean = 1;
+        int64 StdDev = 2;
+    }
+
+    oneof Distribution {
+        UniformDistro Uniform = 3;
+        GaussianDistro Gaussian =  4;
+    }
+
+    google.protobuf.Timestamp start = 5;
+    google.protobuf.Timestamp end = 6;
+
+    google.protobuf.Duration ShortEdge = 7;
+    google.protobuf.Duration LongEdge = 8;
+}

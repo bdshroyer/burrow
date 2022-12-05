@@ -2,8 +2,8 @@ package burrow
 
 import (
 	"fmt"
-	"time"
 	"sort"
+	"time"
 
 	"github.com/bdshroyer/burrow/network"
 )
@@ -59,16 +59,8 @@ func SortInPlace(elts []*network.StopNode) {
 	sort.Sort(sns)
 }
 
-type TimeBox [2]time.Duration
-
 func (t TimeBox) inBounds(weight float64) bool {
 	return weight >= float64(t[0]) && weight <= float64(t[1])
-}
-
-type DeliveryNetworkConfig struct {
-	HubNodes, StopNodes uint
-	Distro SampleDistribution[time.Time]
-	EdgeBounds *TimeBox
 }
 
 // Creates a delivery network with the specified number of hubs and stops  using the provided distribution.
@@ -87,9 +79,9 @@ func MakeDeliveryNetwork(cfg DeliveryNetworkConfig) (*network.DeliveryNetwork, e
 	}
 
 	G := &network.DeliveryNetwork{
-		Hubs: make(map[int64]*network.HubNode, nHubNodes),
-		Stops: make(map[int64]*network.StopNode, nStopNodes),
-		DEdges: make(map[int64][]*network.DeliveryEdge, nHubNodes + nStopNodes),
+		Hubs:   make(map[int64]*network.HubNode, nHubNodes),
+		Stops:  make(map[int64]*network.StopNode, nStopNodes),
+		DEdges: make(map[int64][]*network.DeliveryEdge, nHubNodes+nStopNodes),
 	}
 
 	nFactory := NewNodeFactory()
@@ -110,7 +102,7 @@ func MakeDeliveryNetwork(cfg DeliveryNetworkConfig) (*network.DeliveryNetwork, e
 		nodeList = append(nodeList, newStop)
 
 		// Allocation hint based on the assumption that most nodes will have an edge leading back to each hub
-		G.DEdges[newStop.ID()] = make([]*network.DeliveryEdge, 0, nHubNodes + (nStopNodes - uint(i) + 1))
+		G.DEdges[newStop.ID()] = make([]*network.DeliveryEdge, 0, nHubNodes+(nStopNodes-uint(i)+1))
 
 		// Add edge nodes linking each hub node to each stop node in both directions.
 		for _, hub := range G.Hubs {
@@ -154,4 +146,3 @@ func MakeDeliveryNetwork(cfg DeliveryNetworkConfig) (*network.DeliveryNetwork, e
 
 	return G, nil
 }
-
